@@ -80,26 +80,22 @@ interface Rule {
   note?: string;
 }
 
+// Parchment color fallback (Rule A): when a color contains BOTH "Parchment" and
+// "Tan" (e.g. "Medium Parchment Tan"), drop "Parchment" first and keep "Tan".
+// Only fires when the title is over the limit; never removes "Tan". Color-only —
+// it requires "Parchment" be immediately followed by "Tan" (never a model/trim).
+const PARCHMENT_TAN_RULE: Rule = { re: /\bParchment\s+(?=Tan\b)/gi, to: "", note: "Parchment removed, Tan kept" };
+
 // Color modifier abbreviations — shared by both the full and phrase-mode sets,
 // so every section abbreviates colors the same way (only fire when over limit).
-const COLOR_MODIFIER_RULES: Rule[] = [
-  { re: /\bMedium\b/gi, to: "Med" },
-  { re: /\bCharcoal\b/gi, to: "Char" },
-  { re: /\bMetallic\b/gi, to: "Met" },
-  { re: /\bNatural\b/gi, to: "Nat" },
-  { re: /\bClassic\b/gi, to: "Clsc" },
-  { re: /\bNeutral\b/gi, to: "Neut" },
-  { re: /\bGlossy\b/gi, to: "Glsy" },
-  { re: /\bBright\b/gi, to: "Brt" },
-  { re: /\bMatte\b/gi, to: "Mt" },
-  { re: /\bDark\b/gi, to: "Dk" },
-  { re: /\bLight\b/gi, to: "Lt" },
-  { re: /\bDeep\b/gi, to: "Dp" },
-  { re: /\bPale\b/gi, to: "Pl" },
-  { re: /\bSoft\b/gi, to: "Sft" },
-  { re: /\bWarm\b/gi, to: "Wrm" },
-  { re: /\bCool\b/gi, to: "Cl" },
-];
+const COLOR_MODIFIER_RULES: Rule[] = (
+  [
+    ["Medium", "Med"], ["Charcoal", "Char"], ["Metallic", "Met"], ["Natural", "Nat"],
+    ["Classic", "Clsc"], ["Neutral", "Neut"], ["Glossy", "Glsy"], ["Bright", "Brt"],
+    ["Matte", "Mt"], ["Dark", "Dk"], ["Light", "Lt"], ["Deep", "Dp"], ["Pale", "Pl"],
+    ["Soft", "Sft"], ["Warm", "Wrm"], ["Cool", "Cl"],
+  ] as [string, string][]
+).map(([from, to]) => ({ re: new RegExp(`\\b${from}\\b`, "gi"), to, note: "Color shortened" }));
 
 const ABBREVIATIONS: Rule[] = [
   // Cosmetic / safe joiners first. "and" is case-insensitive so it also covers
@@ -121,7 +117,8 @@ const ABBREVIATIONS: Rule[] = [
   { re: /\bReplacement\b/g, to: "Repl." },
   { re: /\bGenuine Leather\b/g, to: "Genuine Lthr." },
   { re: /\bLeather\b/g, to: "Lthr." },
-  // Color modifier abbreviations (only fire when still over the limit).
+  // Color fallback + modifier abbreviations (only fire when still over the limit).
+  PARCHMENT_TAN_RULE,
   ...COLOR_MODIFIER_RULES,
   { re: /\bBottom\b/g, to: "Lower", note: "Bottom changed to Lower" },
 ];
@@ -137,7 +134,8 @@ const PHRASE_ABBREVIATIONS: Rule[] = [
   { re: /\bPerforated\b/g, to: "Perf." },
   { re: /\bGenuine Leather\b/g, to: "Genuine Lthr." },
   { re: /\bLeather\b/g, to: "Lthr." },
-  // Color modifiers are shared (they affect the color token, not the phrase).
+  // Color fallback + modifiers are shared (they affect the color token, not the phrase).
+  PARCHMENT_TAN_RULE,
   ...COLOR_MODIFIER_RULES,
 ];
 
@@ -317,19 +315,34 @@ function runPipeline(
   };
 }
 
+/**
+ * Color normalization (Rule B): a color that contains "Parchment" but NOT "Tan"
+ * is treated as "Tan" for our seat-cover workflow. Color-only, unconditional.
+ * Returns the normalized color and a note if it changed.
+ */
+export function normalizeColorForTitle(color: string): { color: string; note: string | null } {
+  if (/\bParchment\b/i.test(color) && !/\bTan\b/i.test(color)) {
+    return { color: color.replace(/\bParchment\b/gi, "Tan").replace(/\s+/g, " ").trim(), note: "Parchment converted to Tan" };
+  }
+  return { color, note: null };
+}
+
 /** Generate the single title an account produces for a listing. */
 export function generateForAccount(listing: ListingInput, account: AccountConfig): GeneratedTitle {
   const baseFit: FitmentWord = account.preferredFitmentWord || listing.fitment;
   const baseProduct: string = account.preferredProductWording || listing.productType;
-  const r = runPipeline(listing, account, baseFit, baseProduct, true);
+  const colorNorm = normalizeColorForTitle(listing.color);
+  const wl: ListingInput = { ...listing, color: colorNorm.color };
+  const r = runPipeline(wl, account, baseFit, baseProduct, true);
 
   const characterCount = r.title.length;
   const status = getStatus(characterCount);
   const valid = characterCount <= MAX_LENGTH;
 
   const notes: string[] = [];
+  if (colorNorm.note) notes.push(colorNorm.note);
   if (r.abbreviated) notes.push("Shortened using approved abbreviations");
-  r.abbrevNotes.forEach((n) => notes.push(n)); // e.g. "Used slash format", "Bottom changed to Lower"
+  r.abbrevNotes.forEach((n) => notes.push(n)); // e.g. "Used slash format", "Bottom changed to Lower", color notes
   if (r.fitmentChanged) notes.push("Fits changed to For");
   if (r.yearChanged) notes.push(`Year shortened to ${r.year}`);
   if (r.productChanged) notes.push("Product wording shortened to Cover");
@@ -353,11 +366,23 @@ export function generateForAccount(listing: ListingInput, account: AccountConfig
 }
 
 /**
+ * Shared "Bottom -> Lower" fallback. `Bottom` stays preferred; this is only
+ * applied when a title is still over the limit after the earlier safe steps.
+ * Never produces "Btm". This is the SAME transform the full abbreviation set
+ * applies for the CSV / custom path, centralized here so both paths match.
+ */
+export function applyBottomLowerFallback(title: string): { title: string; changed: boolean } {
+  const next = title.replace(/\bBottom\b/g, "Lower");
+  return { title: next, changed: next !== title };
+}
+
+/**
  * Main-variation phrase fallback (Variation Matrix only). Tries an ordered list
  * of complete variation phrases (most complete first); each phrase is run
  * through the standard pipeline (abbreviations -> Fits→For -> year shortening).
  * The first phrase that yields a valid (<=80) title wins; otherwise the shortest
- * attempted phrase is returned and flagged Too Long / CHECK.
+ * attempted phrase is returned, then the shared Bottom->Lower fallback is applied
+ * if still too long (matching the CSV path), before flagging Too Long / CHECK.
  *
  * The phrase carries its own product wording, so the account's product token is
  * suppressed (product = "") to avoid duplicate "...Seat Cover ... Cover".
@@ -368,6 +393,8 @@ export function generateWithPhraseStages(
   phraseStages: string[],
 ): GeneratedTitle {
   const baseFit: FitmentWord = account.preferredFitmentWord || listing.fitment;
+  const colorNorm = normalizeColorForTitle(listing.color);
+  const baseListing: ListingInput = { ...listing, color: colorNorm.color };
 
   let chosen: PipelineResult | null = null;
   let chosenPhrase = "";
@@ -375,7 +402,7 @@ export function generateWithPhraseStages(
 
   for (let i = 0; i < phraseStages.length; i++) {
     const phrase = phraseStages[i];
-    const r = runPipeline({ ...listing, position: phrase }, account, baseFit, "", false, PHRASE_ABBREVIATIONS);
+    const r = runPipeline({ ...baseListing, position: phrase }, account, baseFit, "", false, PHRASE_ABBREVIATIONS);
     if (r.title.length <= MAX_LENGTH) {
       chosen = r;
       chosenPhrase = phrase;
@@ -389,18 +416,34 @@ export function generateWithPhraseStages(
   }
 
   const r = chosen as PipelineResult;
-  const characterCount = r.title.length;
-  const status = getStatus(characterCount);
-  const valid = characterCount <= MAX_LENGTH;
+  let title = r.title;
 
   const notes: string[] = [];
+  if (colorNorm.note) notes.push(colorNorm.note);
   if (r.abbreviated) notes.push("Shortened using approved abbreviations");
+  r.abbrevNotes.forEach((n) => notes.push(n)); // color fallback / "Color shortened" notes
   if (chosenIndex > 0) notes.push(`Variation phrase shortened to "${chosenPhrase}"`);
   if (chosenPhrase.includes("/")) notes.push("Used slash format");
   if (/\bFront\b/.test(chosenPhrase)) notes.push("Used front fallback");
   else if (/\bSide\b/.test(chosenPhrase)) notes.push("Used side fallback");
   if (r.fitmentChanged) notes.push("Fits changed to For");
   if (r.yearChanged) notes.push(`Year shortened to ${r.year}`);
+
+  // Step 8: shared Bottom -> Lower fallback — only when still over the limit
+  // after the phrase stages, Fits→For, and year shortening (the same rule the
+  // CSV / custom path applies via the shared abbreviation set). "Bottom" stays
+  // preferred otherwise, and "Btm" is never used.
+  if (title.length > MAX_LENGTH) {
+    const bl = applyBottomLowerFallback(title);
+    if (bl.changed) {
+      title = bl.title;
+      notes.push("Bottom changed to Lower");
+    }
+  }
+
+  const characterCount = title.length;
+  const status = getStatus(characterCount);
+  const valid = characterCount <= MAX_LENGTH;
   let riskFlag: RiskFlag = "OK";
   if (!valid) {
     riskFlag = "CHECK";
@@ -411,7 +454,7 @@ export function generateWithPhraseStages(
     accountId: account.id,
     accountName: account.name,
     accountStyleId: account.styleId,
-    title: r.title,
+    title,
     characterCount,
     status,
     riskFlag,

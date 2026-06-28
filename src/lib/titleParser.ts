@@ -26,9 +26,10 @@ const MAKES = [
 ];
 
 const BASE_COLORS = [
-  "Black", "Tan", "Beige", "Brown", "Charcoal", "Gray", "Grey", "Red", "Blue", "Green", "Ivory", "Cream",
-  "White", "Saddle", "Camel", "Mocha", "Burgundy", "Maroon", "Silver", "Gold", "Orange", "Yellow", "Pink",
-  "Purple", "Navy", "Khaki", "Wheat", "Graphite", "Slate", "Stone", "Cognac", "Oak", "Espresso",
+  "Parchment Tan", "Parchment", "Black", "Tan", "Beige", "Brown", "Charcoal", "Gray", "Grey", "Red", "Blue",
+  "Green", "Ivory", "Cream", "White", "Saddle", "Camel", "Mocha", "Burgundy", "Maroon", "Silver", "Gold",
+  "Orange", "Yellow", "Pink", "Purple", "Navy", "Khaki", "Wheat", "Graphite", "Slate", "Stone", "Cognac",
+  "Oak", "Espresso",
 ];
 
 // Color modifiers — captured together with the base color (e.g. "Medium Tan").

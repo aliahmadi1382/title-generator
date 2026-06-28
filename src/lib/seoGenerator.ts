@@ -102,97 +102,17 @@ export function generateMetaTags(info: SeoInfo): string {
 
 // --- Meta Description ------------------------------------------------------
 
-const META_DESC_CONSTANTS = [
-  "OEM replacement seat cover",
-  "Original seat cover",
-  "Factory Match Upholstery",
-  "Exact Fit Seat Cover",
-  "Premium Auto Seat Cover",
-  "Made in USA",
-  "High-Quality Automotive Upholstery",
-  "Car Seat Cover Replacement",
-  "Factory Original Fit",
-  "Direct Replacement Seat Cover",
-  "OEM Spec Auto Upholstery",
-  "Precut & Ready to Install Seat Cover",
-  "Exact Color Match",
-  "Vehicle-Specific Seat Cover",
-  "Handcrafted in the USA",
-  "Auto Interior Restoration",
-  "High-Quality Seat Replacement",
-  "Durable Automotive Upholstery",
-  "Compatible with Heated Seats",
-  "Compatible with Cooled Seats",
-  "Compatible with Ventilated Seats",
-];
-
+/**
+ * Universal sentence-based Meta Description. Vehicle = make + model + chassis
+ * (no color words / color value is ever inserted here — color stays in Meta
+ * Tags only). Uses the best available parsed year/vehicle; never invents data.
+ */
 export function generateMetaDescription(info: SeoInfo): string {
-  const mm = `${info.make} ${info.model}`.replace(/\s+/g, " ").trim();
-  const posL = info.positionLower.trim();
-
-  // Primary, universal sentence-based Meta Description (vehicle includes chassis).
   const vehicle = [info.make, info.model, info.chassis].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
   const yr = info.yearRange || info.years.join(", ");
-  const universal = `Restore your ${yr} ${vehicle} interior with premium US-made OEM replacement seat covers. Factory-match color, material, and perfect fit.`
+  return `Restore your ${yr} ${vehicle} interior with premium US-made OEM replacement seat covers. Factory-match color, material, and perfect fit.`
     .replace(/\s+/g, " ")
     .trim();
-
-  const out: string[] = [];
-
-  // Year-by-year make/model, then year-by-year chassis.
-  for (const y of info.years) out.push(`${y} ${mm} seat cover`);
-  if (info.chassis) for (const y of info.years) out.push(`${y} ${info.make} ${info.chassis} seat cover`);
-
-  // Exact vehicle + position phrases.
-  if (info.chassis) out.push(`${mm} ${info.chassis} ${posL} seat cover`.replace(/\s+/g, " ").trim());
-  out.push(`${mm} ${posL} seat cover`.replace(/\s+/g, " ").trim());
-
-  if (info.descr.bottom) {
-    const s = info.descr.passenger && !info.descr.driver ? "passenger" : "driver";
-    out.push(`${mm} ${s} seat cushion cover`.replace(/\s+/g, " ").trim());
-    out.push(`${s} seat cushion cover`);
-    if (info.chassis) out.push(`${info.chassis} ${s} lower seat cover`);
-    out.push(`${s} seat cushion upholstery replacement`);
-  }
-  if (info.descr.top || info.descr.backrest) {
-    const s = info.descr.passenger && !info.descr.driver ? "passenger" : "driver";
-    out.push(`${s} seat back cover`);
-  }
-
-  // Material + color phrases.
-  if (info.color && info.material) {
-    out.push(`${info.colorLower} ${info.materialLower} seat cover`);
-    if (info.perforated) out.push(`${info.colorLower} perforated ${info.materialLower} seat cover`);
-  }
-  if (info.isLeather) {
-    out.push("genuine leather seat cover", "leather seat cover");
-    if (info.perforated) out.push("perforated leather seat cover", "ventilated leather seat cover");
-    out.push("premium leather replacement upholstery");
-  }
-
-  // Constants + conditional descriptors.
-  out.push(...META_DESC_CONSTANTS);
-  if (info.descr.driver) out.push("Driver Seat Cover");
-  if (info.descr.passenger) out.push("Passenger Seat Cover");
-  if (info.descr.front) out.push("Front Seat Cover");
-  if (info.descr.rear) out.push("Rear Seat Cover");
-  if (info.isLeather) out.push("Leather Seat Cover");
-
-  // Make/chassis SEO tails.
-  if (info.make) out.push(`${info.make} interior accessories`, `${info.make} interior restoration`);
-  if (mm) out.push(`${mm} interior restoration`);
-  if (info.chassis) out.push(`${info.chassis} upholstery replacement`, `${info.chassis} seat upholstery repair`);
-  if (info.make) {
-    out.push(`exact fit ${info.make} seat cover`, `OEM style ${info.make} seat cover`, `${info.make} seat repair cover`);
-    if (info.descr.bottom) out.push(`${info.make} driver bottom seat cover`);
-    out.push(`${info.make} seat cushion replacement`);
-  }
-  out.push("replacement automotive upholstery", "luxury car seat upholstery", "factory style leather upholstery");
-  if (info.color) out.push(`${info.colorLower} interior seat replacement`);
-
-  // Universal sentence is the primary output; supporting keyword phrases follow.
-  const support = dedupe(out).join(", ");
-  return support ? `${universal}\n\n${support}` : universal;
 }
 
 // --- Mobile Description (account-specific) ---------------------------------

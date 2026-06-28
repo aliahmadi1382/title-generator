@@ -8,7 +8,11 @@
       "PowerShell(try { Stop-Process -Id 7204 -Force -ErrorAction Stop; \"stopped PID 7204\" } catch { \"PID 7204 already gone: \" + $_.Exception.Message }; Start-Sleep -Milliseconds 500; $still = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue; if \\($still\\) { \"port 5173 still listening \\(PID \" + $still.OwningProcess + \"\\)\" } else { \"port 5173 free\" })",
       "PowerShell($env:Path = \"C:\\\\Program Files\\\\nodejs;\" + $env:Path; npm run build)",
       "PowerShell($env:Path = \"C:\\\\Program Files\\\\nodejs;\" + $env:Path; npm install --no-fund --no-audit 2>&1 | Select-Object -Last 3; \"--- BUILD ---\"; npm run build 2>&1 | Select-Object -Last 12)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "PowerShell($env:Path = \"C:\\\\Program Files\\\\nodejs;\" + $env:Path; npm run build 2>&1 | Select-Object -Last 10)",
+      "PowerShell($env:Path = \"C:\\\\Program Files\\\\nodejs;\" + $env:Path; npm run build 2>&1 | Select-Object -Last 8)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
