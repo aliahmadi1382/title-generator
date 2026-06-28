@@ -109,7 +109,13 @@ export function generateMetaTags(info: SeoInfo): string {
  */
 export function generateMetaDescription(info: SeoInfo): string {
   const vehicle = [info.make, info.model, info.chassis].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
-  const yr = info.yearRange || info.years.join(", ");
+  // Always use the FULL normalized year range — never title-shortened years.
+  // info.years is expanded from the parsed range (e.g. "2013-17" -> 2013..2017),
+  // so first–last gives the full "2013-2017" form.
+  const yr =
+    info.years.length >= 2
+      ? `${info.years[0]}-${info.years[info.years.length - 1]}`
+      : info.years[0] || info.yearRange;
   return `Restore your ${yr} ${vehicle} interior with premium US-made OEM replacement seat covers. Factory-match color, material, and perfect fit.`
     .replace(/\s+/g, " ")
     .trim();

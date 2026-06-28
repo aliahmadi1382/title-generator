@@ -151,7 +151,12 @@ export default function App() {
       </header>
 
       <main className="content">
-        {tab === "matrix" && <MatrixGenerator accounts={accounts} onSave={handleSaveHistory} restored={restoredMatrix} onResults={setMatrixTitles} />}
+        {/* Variation Matrix stays mounted (hidden when inactive) so its form,
+            account selection, generated results, and edits persist across tab
+            switches for the current session — no localStorage drafts. */}
+        <div style={{ display: tab === "matrix" ? undefined : "none" }}>
+          <MatrixGenerator accounts={accounts} onSave={handleSaveHistory} restored={restoredMatrix} onResults={setMatrixTitles} />
+        </div>
         {tab === "seo" && <SeoPanel accounts={accounts} matrixTitles={matrixTitles} />}
         {tab === "batch" && <BatchProcessor accounts={accounts} onSave={handleSaveHistory} restored={restoredBatch} />}
         {tab === "convert" && <TitleConverter accounts={accounts} onSave={handleSaveHistory} restored={restoredConvert} />}
