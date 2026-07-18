@@ -15,6 +15,7 @@
 
 import type { FitmentWord, ListingInput, ProductWording } from "../types";
 import { MAIN_VARIATIONS, CUSTOM_VARIATIONS } from "../config/variations";
+import { CATALOG_FACTORY_COLORS, CATALOG_MATERIALS } from "./catalogLookup";
 
 // --- Known vocabularies (extend freely) ------------------------------------
 
@@ -26,7 +27,8 @@ const MAKES = [
 ];
 
 const BASE_COLORS = [
-  "Parchment Tan", "Parchment", "Black", "Tan", "Beige", "Brown", "Charcoal", "Gray", "Grey", "Red", "Blue",
+  "Parchment Light Tan", "Parchment Lt Tan", "Parchment Tan", "Parchment",
+  "Black", "Tan", "Beige", "Brown", "Charcoal", "Gray", "Grey", "Red", "Blue",
   "Green", "Ivory", "Cream", "White", "Saddle", "Camel", "Mocha", "Burgundy", "Maroon", "Silver", "Gold",
   "Orange", "Yellow", "Pink", "Purple", "Navy", "Khaki", "Wheat", "Graphite", "Slate", "Stone", "Cognac",
   "Oak", "Espresso",
@@ -38,17 +40,22 @@ const COLOR_MODIFIERS = [
   "Neutral", "Metallic", "Matte", "Glossy",
 ];
 
-// "Medium Tan", "Dark Gray", … first (longest), then plain colors.
-const COLORS = [
+// Spreadsheet factory colors first, then "Medium Tan"/"Dark Gray"-style combos,
+// then plain colors — de-duplicated and longest-first so "Saddle Brown" wins
+// over "Brown" and "Medium Parchment Tan" over "Parchment Tan".
+const COLORS = dedupeByLowest([
+  ...CATALOG_FACTORY_COLORS,
   ...COLOR_MODIFIERS.flatMap((m) => BASE_COLORS.map((c) => `${m} ${c}`)),
   ...BASE_COLORS,
-].sort((a, b) => b.length - a.length);
+]).sort((a, b) => b.length - a.length);
 
-// Longest-first so "Genuine Leather" wins over "Leather", etc.
-const MATERIALS = [
+// Longest-first so "Genuine Leather" wins over "Leather", etc. Includes the
+// spreadsheet's material list (de-duplicated case-insensitively).
+const MATERIALS = dedupeByLowest([
   "Genuine Leather", "Synthetic Leather", "Genuine Lthr.", "Synthetic Lthr.", "Leatherette", "MB-Tex",
   "Microfiber", "Neoprene", "Velour", "Leather", "Lthr.", "Vinyl", "Cloth", "Suede",
-];
+  ...CATALOG_MATERIALS,
+]).sort((a, b) => b.length - a.length);
 
 const PRODUCTS = [
   "Replacement Seat Covers", "Replacement Seat Cover", "Upholstery Covers", "Upholstery Cover",

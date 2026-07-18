@@ -12,7 +12,9 @@
       "PowerShell($env:Path = \"C:\\\\Program Files\\\\nodejs;\" + $env:Path; npm run build 2>&1 | Select-Object -Last 10)",
       "PowerShell($env:Path = \"C:\\\\Program Files\\\\nodejs;\" + $env:Path; npm run build 2>&1 | Select-Object -Last 8)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "PowerShell($env:Path = \"C:\\\\Program Files\\\\nodejs;\" + $env:Path; npm run build 2>&1 | Select-String -Pattern \"modules transformed|built in|error TS|error during\" | Select-Object -Last 5)"
     ]
   }
 }

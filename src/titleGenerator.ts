@@ -16,6 +16,7 @@ import type {
   Status,
   TitleToken,
 } from "./types";
+import { visualColorFor } from "./lib/catalogLookup";
 
 export const MAX_LENGTH = 80;
 
@@ -86,16 +87,41 @@ interface Rule {
 // it requires "Parchment" be immediately followed by "Tan" (never a model/trim).
 const PARCHMENT_TAN_RULE: Rule = { re: /\bParchment\s+(?=Tan\b)/gi, to: "", note: "Parchment removed, Tan kept" };
 
+// Parchment/Light/Tan ordered fallback. For a color like "Parchment Light Tan",
+// "Tan" is the main VISUAL color and is NEVER removed. Reduction order (each
+// step only fires if the title is still over the limit):
+//   "Parchment Light Tan" -> "Parchment Lt Tan" -> "Parchment Tan" -> "Tan"
+// (the last step is the existing PARCHMENT_TAN_RULE). Both rules are anchored
+// on the full "Parchment … Tan" sequence, so they can only ever match the color
+// token — never "Light"/"Lt" in a make, model, trim, or chassis name.
+const PARCHMENT_LIGHT_LT_RULE: Rule = {
+  re: /\b(Parchment)\s+Light(?=\s+Tan\b)/gi,
+  to: "$1 Lt",
+  note: "Light shortened to Lt",
+};
+const PARCHMENT_LT_REMOVED_RULE: Rule = {
+  re: /\b(Parchment)\s+Lt\s+(?=Tan\b)/gi,
+  to: "$1 ",
+  note: "Light modifier removed, Tan kept",
+};
+
+// Approved color modifier abbreviations (the ONLY approved list — no new ones).
+const COLOR_MODIFIER_PAIRS: [string, string][] = [
+  ["Medium", "Med"], ["Charcoal", "Char"], ["Metallic", "Met"], ["Natural", "Nat"],
+  ["Classic", "Clsc"], ["Neutral", "Neut"], ["Glossy", "Glsy"], ["Bright", "Brt"],
+  ["Matte", "Mt"], ["Dark", "Dk"], ["Light", "Lt"], ["Deep", "Dp"], ["Pale", "Pl"],
+  ["Soft", "Sft"], ["Warm", "Wrm"], ["Cool", "Cl"],
+];
+const MODIFIER_ABBREV = new Map(COLOR_MODIFIER_PAIRS.map(([f, t]) => [f.toLowerCase(), t]));
+const MODIFIER_SHORT_FORMS = new Set(COLOR_MODIFIER_PAIRS.map(([, t]) => t.toLowerCase()));
+
 // Color modifier abbreviations — shared by both the full and phrase-mode sets,
 // so every section abbreviates colors the same way (only fire when over limit).
-const COLOR_MODIFIER_RULES: Rule[] = (
-  [
-    ["Medium", "Med"], ["Charcoal", "Char"], ["Metallic", "Met"], ["Natural", "Nat"],
-    ["Classic", "Clsc"], ["Neutral", "Neut"], ["Glossy", "Glsy"], ["Bright", "Brt"],
-    ["Matte", "Mt"], ["Dark", "Dk"], ["Light", "Lt"], ["Deep", "Dp"], ["Pale", "Pl"],
-    ["Soft", "Sft"], ["Warm", "Wrm"], ["Cool", "Cl"],
-  ] as [string, string][]
-).map(([from, to]) => ({ re: new RegExp(`\\b${from}\\b`, "gi"), to, note: "Color shortened" }));
+const COLOR_MODIFIER_RULES: Rule[] = COLOR_MODIFIER_PAIRS.map(([from, to]) => ({
+  re: new RegExp(`\\b${from}\\b`, "gi"),
+  to,
+  note: "Color shortened",
+}));
 
 const ABBREVIATIONS: Rule[] = [
   // Cosmetic / safe joiners first. "and" is case-insensitive so it also covers
@@ -118,6 +144,10 @@ const ABBREVIATIONS: Rule[] = [
   { re: /\bGenuine Leather\b/g, to: "Genuine Lthr." },
   { re: /\bLeather\b/g, to: "Lthr." },
   // Color fallback + modifier abbreviations (only fire when still over the limit).
+  // Parchment/Light/Tan order: Light->Lt, then drop Lt, then drop Parchment —
+  // "Tan" always survives.
+  PARCHMENT_LIGHT_LT_RULE,
+  PARCHMENT_LT_REMOVED_RULE,
   PARCHMENT_TAN_RULE,
   ...COLOR_MODIFIER_RULES,
   { re: /\bBottom\b/g, to: "Lower", note: "Bottom changed to Lower" },
@@ -132,12 +162,111 @@ const PHRASE_ABBREVIATIONS: Rule[] = [
   { re: /\bWithout\b/g, to: "w/o" },
   { re: /\bWith\b/g, to: "w/" },
   { re: /\bPerforated\b/g, to: "Perf." },
+  // Additional-variation abbreviations. These words never appear in the main
+  // variation phrases (which are seat components + product), so applying them
+  // here only shortens the user's Additional Variation token — the phrase's own
+  // component/product reduction still comes from its ordered phrase stages.
+  { re: /\bSecond Row\b/gi, to: "2nd Row" },
+  { re: /\bCenter Console\b/gi, to: "Console" },
   { re: /\bGenuine Leather\b/g, to: "Genuine Lthr." },
   { re: /\bLeather\b/g, to: "Lthr." },
   // Color fallback + modifiers are shared (they affect the color token, not the phrase).
+  // Same Parchment/Light/Tan order as the full set — "Tan" always survives.
+  PARCHMENT_LIGHT_LT_RULE,
+  PARCHMENT_LT_REMOVED_RULE,
   PARCHMENT_TAN_RULE,
   ...COLOR_MODIFIER_RULES,
 ];
+
+// ---------------------------------------------------------------------------
+// Visual-color-protected reduction (ColorFactory-driven).
+//
+// The listing's color may be a multi-word factory color ("Saddle Brown",
+// "Medium Parchment Tan", "Light Titanium Gray"). The MAIN VISUAL color
+// (resolved from the spreadsheet's ColorFactory mapping first, then from the
+// known visual-color vocabulary) must survive shortening. When the title is
+// over the limit, the color is reduced ONE WORD AT A TIME, re-checking the
+// length after every step (fitToLimit stops as soon as the title fits):
+//   1. abbreviate approved modifiers ("Light" -> "Lt", "Dark" -> "Dk", …)
+//   2. remove the abbreviated modifiers one at a time
+//   3. remove remaining factory descriptors ("Saddle", "Titanium", …) one at
+//      a time — the visual color word is NEVER removed.
+// A color with no in-name visual word (e.g. "Ebony") is never reduced here.
+// ---------------------------------------------------------------------------
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Whole-phrase regex for one exact color form (never matches inside words). */
+function phraseRegex(phrase: string): RegExp {
+  return new RegExp(`(?<![A-Za-z0-9])${escapeRegex(phrase)}(?![A-Za-z0-9])`, "g");
+}
+
+/**
+ * Build the ordered reduction rules for ONE specific color string. Each rule
+ * rewrites the color's current form into its next (one-word-smaller) form, so
+ * only the exact color phrase in the title is ever touched — "Light"/"Dark"/
+ * "Saddle" in a make, model, trim, or chassis name can never match.
+ */
+export function buildColorReductionRules(color: string, visualColor: string): Rule[] {
+  const visual = visualColor.trim();
+  const words = color.trim().split(/\s+/);
+  if (!visual || words.length <= 1) return [];
+  // The visual color word must actually be present (rightmost occurrence wins).
+  const visualIdx = words.map((w) => w.toLowerCase()).lastIndexOf(visual.toLowerCase());
+  if (visualIdx < 0) return [];
+
+  const rules: Rule[] = [];
+  let current = [...words];
+  const step = (next: string[], note: string) => {
+    rules.push({ re: phraseRegex(current.join(" ")), to: next.join(" "), note });
+    current = next;
+  };
+
+  // 1. Abbreviate approved modifiers, one word per step (left to right).
+  for (let i = 0; i < current.length; i++) {
+    if (i === visualIdx) continue;
+    const abbrev = MODIFIER_ABBREV.get(current[i].toLowerCase());
+    if (abbrev && abbrev.toLowerCase() !== current[i].toLowerCase()) {
+      const next = [...current];
+      const from = next[i];
+      next[i] = abbrev;
+      step(next, `${from} shortened to ${abbrev}`);
+    }
+  }
+  // 2. Remove modifier words (now in short form), one per step.
+  for (let i = current.length - 1; i >= 0; i--) {
+    if (current[i].toLowerCase() === visual.toLowerCase()) continue;
+    if (MODIFIER_SHORT_FORMS.has(current[i].toLowerCase())) {
+      step(current.filter((_, j) => j !== i), `Color modifier removed; ${visual} preserved`);
+    }
+  }
+  // 3. Remove remaining factory descriptors, one per step — never the visual word.
+  for (let i = current.length - 1; i >= 0; i--) {
+    if (current[i].toLowerCase() === visual.toLowerCase()) continue;
+    const word = current[i];
+    const note = /^parchment$/i.test(word)
+      ? `Parchment removed; ${visual} preserved`
+      : `Factory color descriptor removed; ${visual} preserved`;
+    step(current.filter((_, j) => j !== i), note);
+  }
+  return rules;
+}
+
+/**
+ * Compose a rule set with the dynamic color-reduction chain for this listing's
+ * color inserted at the start of the color block (before the static parchment
+ * fallback), so the ColorFactory-aware reduction takes priority everywhere the
+ * shared pipeline runs (Matrix main/custom, CSV converter, batch).
+ */
+function withColorReduction(base: Rule[], color: string, visualColor: string): Rule[] {
+  const dynamic = buildColorReductionRules(color, visualColor);
+  if (dynamic.length === 0) return base;
+  const at = base.indexOf(PARCHMENT_LIGHT_LT_RULE);
+  const idx = at >= 0 ? at : base.length;
+  return [...base.slice(0, idx), ...dynamic, ...base.slice(idx)];
+}
 
 function applyRule(text: string, rule: Rule): string {
   return text.replace(rule.re, rule.to).replace(/\s+/g, " ").trim();
@@ -183,6 +312,27 @@ interface TitleValues {
  * value, preserved exactly. The variation token only renders when the account
  * opts in AND a variation value exists.
  */
+/**
+ * Ensure the account's title structure carries a "variation" slot whenever the
+ * user entered an Additional Variation. Accounts that don't normally weave the
+ * variation in still get it appended (right after the seat position, else before
+ * the product wording, else at the end) so the Additional Variation is NEVER
+ * dropped just because of an account's default layout. When there is no
+ * variation value, the structure is returned unchanged.
+ */
+export function ensureVariationToken(structure: TitleToken[], listing: ListingInput): TitleToken[] {
+  if (!listing.variation.trim() || structure.includes("variation")) return structure;
+  const s = [...structure];
+  const posIdx = s.indexOf("position");
+  if (posIdx >= 0) s.splice(posIdx + 1, 0, "variation");
+  else {
+    const prodIdx = s.indexOf("productType");
+    if (prodIdx >= 0) s.splice(prodIdx, 0, "variation");
+    else s.push("variation");
+  }
+  return s;
+}
+
 function resolveTokens(listing: ListingInput, account: AccountConfig, v: TitleValues): string[] {
   return account.titleStructure.map((token: TitleToken) => {
     switch (token) {
@@ -199,7 +349,10 @@ function resolveTokens(listing: ListingInput, account: AccountConfig, v: TitleVa
       case "material":
         return listing.material;
       case "variation":
-        return account.usesVariation && listing.variation.trim().length > 0 ? listing.variation : "";
+        // Additional Variation is preserved for EVERY account whenever the user
+        // entered one (never gated away). ensureVariationToken() guarantees this
+        // token is present in the effective structure when a variation exists.
+        return listing.variation.trim().length > 0 ? listing.variation : "";
       case "productType":
         return v.product;
       case "color":
@@ -333,7 +486,16 @@ export function generateForAccount(listing: ListingInput, account: AccountConfig
   const baseProduct: string = account.preferredProductWording || listing.productType;
   const colorNorm = normalizeColorForTitle(listing.color);
   const wl: ListingInput = { ...listing, color: colorNorm.color };
-  const r = runPipeline(wl, account, baseFit, baseProduct, true);
+  // Guarantee the Additional Variation slot exists for this account when needed.
+  const eaccount: AccountConfig = { ...account, titleStructure: ensureVariationToken(account.titleStructure, wl) };
+  const r = runPipeline(
+    wl,
+    eaccount,
+    baseFit,
+    baseProduct,
+    true,
+    withColorReduction(ABBREVIATIONS, wl.color, visualColorFor(wl.color)),
+  );
 
   const characterCount = r.title.length;
   const status = getStatus(characterCount);
@@ -349,6 +511,10 @@ export function generateForAccount(listing: ListingInput, account: AccountConfig
   let riskFlag: RiskFlag = "OK";
   if (!valid) {
     riskFlag = "CHECK";
+    // Over 80: the title is shown WITH all entered data preserved (never trimmed
+    // to fit). Surface the reason clearly for manual review.
+    if (wl.variation.trim()) notes.push("Additional variation preserved; manual shortening needed");
+    else notes.push("Required input preserved; manual shortening needed");
     notes.push("Needs manual shortening");
   }
 
@@ -395,6 +561,9 @@ export function generateWithPhraseStages(
   const baseFit: FitmentWord = account.preferredFitmentWord || listing.fitment;
   const colorNorm = normalizeColorForTitle(listing.color);
   const baseListing: ListingInput = { ...listing, color: colorNorm.color };
+  // Guarantee the Additional Variation slot exists for this account when needed.
+  const eaccount: AccountConfig = { ...account, titleStructure: ensureVariationToken(account.titleStructure, baseListing) };
+  const rules = withColorReduction(PHRASE_ABBREVIATIONS, baseListing.color, visualColorFor(baseListing.color));
 
   let chosen: PipelineResult | null = null;
   let chosenPhrase = "";
@@ -402,7 +571,7 @@ export function generateWithPhraseStages(
 
   for (let i = 0; i < phraseStages.length; i++) {
     const phrase = phraseStages[i];
-    const r = runPipeline({ ...baseListing, position: phrase }, account, baseFit, "", false, PHRASE_ABBREVIATIONS);
+    const r = runPipeline({ ...baseListing, position: phrase }, eaccount, baseFit, "", false, rules);
     if (r.title.length <= MAX_LENGTH) {
       chosen = r;
       chosenPhrase = phrase;
@@ -447,6 +616,8 @@ export function generateWithPhraseStages(
   let riskFlag: RiskFlag = "OK";
   if (!valid) {
     riskFlag = "CHECK";
+    if (baseListing.variation.trim()) notes.push("Additional variation preserved; manual shortening needed");
+    else notes.push("Required input preserved; manual shortening needed");
     notes.push("Needs manual shortening");
   }
 

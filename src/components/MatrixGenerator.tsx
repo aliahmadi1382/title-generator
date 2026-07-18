@@ -20,7 +20,17 @@ import { evaluateTitle, MAX_LENGTH } from "../titleGenerator";
 import { MAIN_VARIATIONS, CUSTOM_VARIATIONS } from "../config/variations";
 import { buildAccountBlocks, buildMatrixCsv, countBlocks } from "../lib/matrix";
 import { downloadText } from "../lib/download";
-import { CharCount, CopyButton, Field, MATERIAL_OPTIONS, RiskBadge, StatusBadge, VARIATION_OPTIONS } from "./ui";
+import { CharCount, CopyButton, Field, RiskBadge, StatusBadge } from "./ui";
+import { Autocomplete } from "./Autocomplete";
+import {
+  CATALOG_FACTORY_COLORS,
+  CATALOG_MAKES,
+  CATALOG_MATERIALS,
+  CATALOG_VARIATIONS,
+  isKnownMake,
+  modelBelongsToMake,
+  modelsForMake,
+} from "../lib/catalogLookup";
 
 const FITMENT_OPTIONS: FitmentWord[] = ["Fits", "For"];
 const PRODUCT_OPTIONS: ProductWording[] = [
@@ -71,13 +81,11 @@ async function copyToClipboard(text: string) {
 function VariationRow({ t, onEdit }: { t: MatrixTitle; onEdit: (value: string) => void }) {
   const ev = evaluateTitle(t.editedTitle);
   const isEdited = t.editedTitle !== t.title;
-  const noteText = !ev.valid
-    ? "Needs manual shortening"
-    : isEdited
-      ? t.notes
-        ? `${t.notes}; Manually edited`
-        : "Manually edited"
-      : t.notes;
+  // Show the generator's notes (uniqueness / preservation / shortening) even when
+  // over 80, and add "Manually edited" when the user changed the title.
+  const baseNote = t.notes || (!ev.valid ? "Needs manual shortening" : "");
+  const noteText = isEdited ? (baseNote ? `${baseNote}; Manually edited` : "Manually edited") : baseNote;
+  const flagged = !ev.valid || t.riskFlag === "CHECK";
   return (
     <li className={`vm-row${ev.valid ? "" : " invalid"}`}>
       <span className="vm-var-name">{t.variationName}</span>
@@ -89,7 +97,7 @@ function VariationRow({ t, onEdit }: { t: MatrixTitle; onEdit: (value: string) =
       />
       <span className="vm-meta">
         <StatusBadge status={ev.status} />
-        {!ev.valid && <RiskBadge risk="CHECK" />}
+        {flagged && <RiskBadge risk="CHECK" />}
         <CharCount count={ev.characterCount} max={MAX_LENGTH} />
         <CopyButton text={t.editedTitle} />
       </span>
@@ -229,6 +237,20 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
   const update = <K extends keyof MatrixBaseInput>(key: K, value: MatrixBaseInput[K]) =>
     setBase((b) => ({ ...b, [key]: value }));
 
+  // Make/Model dependency: when the make changes to a KNOWN catalog make and
+  // the current model does not belong to it, clear the model (no invalid
+  // make/model combinations). Unknown (manually typed) makes leave the model
+  // untouched — manual values stay allowed.
+  const updateMake = (value: string) =>
+    setBase((b) => ({
+      ...b,
+      make: value,
+      model:
+        b.model.trim() && isKnownMake(value) && !modelBelongsToMake(value, b.model) ? "" : b.model,
+    }));
+
+  const modelOptions = modelsForMake(base.make);
+
   const effectiveBase = (): MatrixBaseInput => ({
     ...base,
     additionalVariation: includeAdditional ? base.additionalVariation : "",
@@ -365,21 +387,41 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
             <input value={base.yearRange} onChange={(e) => update("yearRange", e.target.value)} placeholder="2000-2010" />
           </Field>
           <Field label="Make" required>
-            <input value={base.make} onChange={(e) => update("make", e.target.value)} placeholder="Chevy" />
+            <Autocomplete
+              value={base.make}
+              onChange={updateMake}
+              options={CATALOG_MAKES}
+              placeholder="Chevy"
+              ariaLabel="Make"
+            />
           </Field>
           <Field label="Model" required>
-            <input value={base.model} onChange={(e) => update("model", e.target.value)} placeholder="Silverado 1500" />
+            <Autocomplete
+              value={base.model}
+              onChange={(v) => update("model", v)}
+              options={modelOptions}
+              placeholder="Silverado 1500"
+              ariaLabel="Model"
+              emptyHint="Select a make first"
+            />
           </Field>
           <Field label="Material" required>
-            <input list="material-options" value={base.material} onChange={(e) => update("material", e.target.value)} placeholder="Genuine Leather" />
-            <datalist id="material-options">
-              {MATERIAL_OPTIONS.map((o) => (
-                <option key={o} value={o} />
-              ))}
-            </datalist>
+            <Autocomplete
+              value={base.material}
+              onChange={(v) => update("material", v)}
+              options={CATALOG_MATERIALS}
+              placeholder="Genuine Leather"
+              ariaLabel="Material"
+            />
           </Field>
-          <Field label="Color" required>
-            <input value={base.color} onChange={(e) => update("color", e.target.value)} placeholder="Tan" />
+          <Field label="Color" required hint="factory color">
+            <Autocomplete
+              value={base.color}
+              onChange={(v) => update("color", v)}
+              options={CATALOG_FACTORY_COLORS}
+              placeholder="Tan"
+              ariaLabel="Color"
+            />
           </Field>
           <Field label="Fitment" hint="auto-falls back to For">
             <select value={base.fitment} onChange={(e) => update("fitment", e.target.value as FitmentWord)}>
@@ -404,12 +446,13 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
           </Field>
           {includeAdditional && (
             <Field label="Additional Variation" hint="optional">
-              <input list="variation-options" value={base.additionalVariation} onChange={(e) => update("additionalVariation", e.target.value)} placeholder="Perforated" />
-              <datalist id="variation-options">
-                {VARIATION_OPTIONS.map((o) => (
-                  <option key={o} value={o} />
-                ))}
-              </datalist>
+              <Autocomplete
+                value={base.additionalVariation}
+                onChange={(v) => update("additionalVariation", v)}
+                options={CATALOG_VARIATIONS}
+                placeholder="Perforated"
+                ariaLabel="Additional Variation"
+              />
             </Field>
           )}
           <Field label="Session Notes" hint="optional">

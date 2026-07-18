@@ -13,9 +13,11 @@ import type {
   ListingInput,
   MatrixBaseInput,
   MatrixTitle,
+  ProductWording,
   VariationConfig,
 } from "../types";
 import { generateForAccount, generateWithPhraseStages, getStatus } from "../titleGenerator";
+import { compareTitles } from "./uniqueness";
 import { toCsvText } from "./csv";
 
 /** Map the matrix base inputs into a ListingInput (position filled per variation). */
@@ -81,9 +83,108 @@ export function generateVariationTitle(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Cross-account uniqueness (per variation)
+//
+// For a given variation, the title each account produces must be meaningfully
+// different from the others. After the primary titles are generated we walk the
+// accounts in order; if an account's title duplicates / is too similar to one
+// already accepted, we try to regenerate it with a DIFFERENT-but-accurate title
+// (a different product wording) — never by dropping required data. If no safe
+// alternate is unique, the title is kept as-is and flagged CHECK for review.
+// ---------------------------------------------------------------------------
+
+// Accurate product-wording alternates, tried in order to make a title distinct.
+// All are truthful descriptors of a seat-cover product (no invented words).
+const PRODUCT_VARIANTS: ProductWording[] = ["Seat Cover", "Replacement Cover", "Upholstery Cover", "Cover"];
+
+function appendNote(existing: string, note: string): string {
+  return existing ? `${existing}; ${note}` : note;
+}
+
+/** Regenerate a variation title for an account forcing a specific product wording. */
+function productVariantTitle(
+  base: MatrixBaseInput,
+  variation: VariationConfig,
+  account: AccountConfig,
+  product: ProductWording,
+): MatrixTitle {
+  const listing: ListingInput = { ...baseToListing(base), position: variation.label };
+  const g = generateForAccount(listing, { ...account, preferredProductWording: product });
+  return {
+    ...g,
+    variationId: variation.id,
+    variationName: variation.label,
+    variationType: variation.type,
+    editedTitle: g.title,
+  };
+}
+
+/**
+ * Enforce cross-account uniqueness for each variation across the account blocks.
+ * `blocks[i]` corresponds to `accounts[i]`; `titles[j]` to `variations[j]`.
+ */
+function dedupeAcrossAccounts(
+  blocks: AccountBlock[],
+  base: MatrixBaseInput,
+  variations: VariationConfig[],
+  accounts: AccountConfig[],
+): void {
+  if (blocks.length < 2) return; // uniqueness only matters across 2+ accounts
+
+  for (let vi = 0; vi < variations.length; vi++) {
+    const variation = variations[vi];
+    const accepted: string[] = [];
+
+    for (let bi = 0; bi < blocks.length; bi++) {
+      const account = accounts[bi];
+      let t = blocks[bi].titles[vi];
+
+      const conflict = accepted.find((a) => {
+        const r = compareTitles(a, t.editedTitle);
+        return r.duplicate || r.similar;
+      });
+
+      if (conflict) {
+        // Try accurate product-wording alternates until one is safely unique.
+        let fixed: MatrixTitle | null = null;
+        for (const pw of PRODUCT_VARIANTS) {
+          const cand = productVariantTitle(base, variation, account, pw);
+          const clash = accepted.some((a) => {
+            const r = compareTitles(a, cand.editedTitle);
+            return r.duplicate || r.similar;
+          });
+          if (!clash) {
+            fixed = { ...cand, notes: appendNote(cand.notes, "Duplicate avoided with alternate account pattern") };
+            break;
+          }
+        }
+
+        if (fixed) {
+          t = fixed;
+        } else {
+          // Could not make it safely unique — keep the accurate title, flag CHECK.
+          const r = compareTitles(conflict, t.editedTitle);
+          const msg = r.duplicate ? "Duplicate title detected" : "Similar title detected";
+          t = {
+            ...t,
+            riskFlag: "CHECK",
+            notes: appendNote(appendNote(t.notes, msg), "Manual review needed for uniqueness or length"),
+          };
+        }
+        blocks[bi].titles[vi] = t;
+      }
+
+      accepted.push(t.editedTitle);
+    }
+  }
+}
+
 /**
  * Build one block per account, each containing one title per enabled variation.
  * Accounts are processed in the given order (already filtered to the selection).
+ * A cross-account uniqueness pass then guarantees the per-variation titles are
+ * meaningfully different between accounts.
  */
 export function buildAccountBlocks(
   base: MatrixBaseInput,
@@ -91,12 +192,14 @@ export function buildAccountBlocks(
   accounts: AccountConfig[],
 ): AccountBlock[] {
   const enabledVariations = variations.filter((v) => v.enabled);
-  return accounts.map((a) => ({
+  const blocks: AccountBlock[] = accounts.map((a) => ({
     accountId: a.id,
     accountName: a.name,
     accountStyleId: a.styleId,
     titles: enabledVariations.map((v) => generateVariationTitle(base, v, a)),
   }));
+  dedupeAcrossAccounts(blocks, base, enabledVariations, accounts);
+  return blocks;
 }
 
 /** Status counts across blocks, based on the effective (edited) titles. */
@@ -145,8 +248,9 @@ function matrixRow(base: MatrixBaseInput, t: MatrixTitle): (string | number)[] {
   const edited = selected !== t.title;
   // Keep the generator's notes (which already include any fitment/year/product
   // fallback messages); append "Manually edited" when the user changed it.
+  const flagged = tooLong || t.riskFlag === "CHECK";
   let notes = t.notes;
-  if (tooLong) notes = notes ? `${notes}` : "Needs manual shortening";
+  if (tooLong) notes = notes || "Needs manual shortening";
   else if (edited) notes = notes ? `${notes}; Manually edited` : "Manually edited";
 
   return [
@@ -162,7 +266,7 @@ function matrixRow(base: MatrixBaseInput, t: MatrixTitle): (string | number)[] {
     selected, // selected_new_title (edited or same)
     len,
     status,
-    tooLong ? "CHECK" : "OK",
+    flagged ? "CHECK" : "OK",
     notes,
   ];
 }

@@ -212,11 +212,53 @@ generated_title, title_length, status, risk_flag, notes`
 
 ---
 
+## Reference catalog & autocomplete
+
+The Variation Matrix form fields (Make, Model, Material, Color, Additional
+Variation) offer searchable autocomplete driven by a local reference catalog
+([`src/data/catalog.ts`](src/data/catalog.ts)). Make/Model data comes from
+`US_Make_Model_List.xlsx` (sheet **Make Model** — the authoritative source;
+numeric models like `300`, `911`, `1500` are kept as clean strings);
+materials, factory colors, and variations come from `USF GENERATOR.xlsx`
+(sheets **Material**, **ColorFactory**, **Variation** — other sheets ignored).
+No Google authentication or network access is needed at runtime. Searches
+tolerate case, extra spaces, and hyphen-vs-space differences
+(`mercedes benz` finds `Mercedes-Benz`); the canonical spreadsheet value is
+stored on selection. Suggestions are ranked
+exact → starts-with → contains (case-insensitive, max 8 shown), fully keyboard
+accessible (↑/↓/Enter/Escape), and Model suggestions are **dependent on the
+selected Make** (changing the make clears an incompatible model). Manual typing
+is still allowed everywhere.
+
+The **ColorFactory** sheet also drives the *visual color protection* in the
+title shortener: each factory color (e.g. `Saddle Brown`) maps to its main
+visual color (`Brown`). When a title is over 80 chars the color is reduced one
+word at a time — approved modifier abbreviations first (`Light`→`Lt`), then
+modifier removal, then factory descriptors (`Saddle`, `Titanium`, `Parchment`) —
+and the visual color word is **never** removed.
+
 ## Title rules (built in)
 
 - Preserves year range, make, model, seat position, material meaning, color,
   variation (if present), and product type. No invented trims, fitment, item
   IDs, random words, or full-vehicle implications.
+- **Every entered field is preserved** — including an **Additional Variation**
+  (Armrest, Headrest, Center Console, Foam Cushion, …), which is woven into
+  **every** account's title and never dropped to save space. If keeping all data
+  pushes a title past 80 chars, the title is still shown and flagged
+  `Too Long` / `CHECK` (note: "Additional variation preserved; manual shortening
+  needed" or "Required input preserved over 80-character limit") rather than
+  losing information.
+- **Cross-account uniqueness** (Variation Matrix) — for each variation, the
+  title each account produces must be meaningfully different from the others.
+  Titles are compared after normalization (case, spacing, punctuation,
+  `Fits`/`For`, `&`/`/`/`and`, and approved abbreviation pairs are all collapsed);
+  identical → duplicate, ≥ 85% similar → too similar (see
+  [`src/lib/uniqueness.ts`](src/lib/uniqueness.ts)). A clashing title is
+  regenerated with a different accurate product wording; if it still can't be
+  made distinct it is flagged `CHECK` for manual review (notes: "Duplicate
+  avoided with alternate account pattern" / "Duplicate title detected" /
+  "Similar title detected" / "Manual review needed for uniqueness or length").
 - Fitment limited to **Fits** (preferred) / **For**. When a title is over 80,
   shortening is applied in order: approved abbreviations → switch `Fits`→`For` →
   shorten the year ending (`2000-2010`→`2000-10`) → shorten the year fully
