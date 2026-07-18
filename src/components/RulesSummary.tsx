@@ -64,9 +64,10 @@ export function RulesSummary({ accounts }: { accounts: AccountConfig[] }) {
           <h3>Abbreviations</h3>
           <ul className="rules-list">
             <li><strong>Never</strong> shortened: <code>Genuine</code> (no <code>Gen.</code>), <code>Driver</code> (no <code>Drvr</code>), <code>Passenger</code> (no <code>Pass</code>/<code>Pass.</code>/<code>Psgr</code>), <code>Bottom</code> (no <code>Btm</code> — use <code>Lower</code>).</li>
-            <li><code>Genuine Leather</code> stays in full when possible, only shortening to <code>Genuine Lthr.</code> if necessary.</li>
-            <li>Materials kept intact: Leatherette, Vinyl, Cloth, Suede, MB-Tex, Synthetic Leather (never turned into “Leather”).</li>
-            <li>Allowed only when needed: <code>Perforated→Perf.</code>, <code>Leather→Lthr.</code>, <code>Replacement→Repl.</code>, <code>With→w/</code>, <code>Without→w/o</code>, <code>And→&amp;</code>, <code>Second Row→2nd Row</code>, <code>Center Console→Console</code>, <code>Bottom→Lower</code>, <code>Backrest→Back</code>, <code>Lean Back→Leanback</code>.</li>
+            <li><strong>Protected materials:</strong> <code>Leather</code> and <code>Leatherette</code> always stay complete — never <code>Lthr.</code>, <code>Lthr</code>, or <code>Leath.</code>, and never removed to fit. A legacy <code>Lthr.</code> in an imported CSV is restored to <code>Leather</code>.</li>
+            <li>Materials kept intact and distinct: Leatherette, Vinyl, Cloth, Suede, MB-Tex, Synthetic Leather (never turned into “Leather”).</li>
+            <li><code>Replacement</code> fallback (in order, only while over 80): <code>Replacement→Repl.</code>, then <code>Repl.</code> removed — the product wording (<code>Seat Cover</code>/<code>Cover</code>) always remains.</li>
+            <li>Allowed only when needed: <code>Perforated→Perf.</code>, <code>With→w/</code>, <code>Without→w/o</code>, <code>And→&amp;</code>, <code>Second Row→2nd Row</code>, <code>Center Console→Console</code>, <code>Bottom→Lower</code>, <code>Backrest→Back</code>, <code>Lean Back→Leanback</code>.</li>
           </ul>
         </div>
       </div>

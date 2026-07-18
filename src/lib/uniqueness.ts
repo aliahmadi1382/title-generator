@@ -21,8 +21,14 @@ export const SIMILARITY_THRESHOLD = 0.85;
  * Reduce a title to a canonical comparison form. Removes the differences the
  * spec calls "not meaningful": case, extra spaces, punctuation, "Fits"/"For",
  * connector style (`&`, `/`, `and`), and the approved abbreviation pairs
- * (Leather/Lthr., Replacement/Repl., Perforated/Perf., Bottom/Lower, Medium/Med,
- * Dark/Dk, Light/Lt, …) — each collapsed to one canonical long form.
+ * (Replacement/Repl., Perforated/Perf., Bottom/Lower, Medium/Med, Dark/Dk,
+ * Light/Lt, …) — each collapsed to one canonical long form.
+ *
+ * MATERIALS: legacy `Lthr.` is folded to `leather` so an imported title
+ * compares equal to its regenerated twin, but `leather` and `leatherette`
+ * remain SEPARATE tokens — they are different materials and must never compare
+ * as the same product. (`\blthr` cannot match inside "leatherette", and no rule
+ * maps one to the other.)
  */
 export function normalizeTitle(raw: string): string {
   let s = ` ${(raw || "").toLowerCase()} `;

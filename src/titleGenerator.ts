@@ -63,12 +63,21 @@ function build(parts: string[]): string {
 //   Driver  -> Drvr            (forbidden)
 //   Passenger -> Pass/Pass./Psgr (forbidden)
 //   Bottom  -> Btm             (forbidden)
+//   Leather -> Lthr./Lthr/Leath. (forbidden — see MATERIAL PROTECTION below)
+//   Leatherette -> any short form (forbidden)
 //   Leatherette/Vinyl/Cloth/Suede/MB-Tex are never turned into "Leather".
 //
+// MATERIAL PROTECTION: "Leather" and "Leatherette" are protected material words.
+// They are ALWAYS written in full and are never abbreviated or removed by any
+// generation path (matrix, phrase stages, custom variations, CSV converter, and
+// cross-account uniqueness regeneration all share these rule sets). An over-80
+// title carrying the correct material is preferred over a shorter one that
+// abbreviates it — such titles are surfaced as Too Long / CHECK instead.
+// Legacy "Lthr."/"Lthr" arriving from an imported CSV is normalized back to
+// "Leather" by the parser, so it never survives into a generated title.
+//
 // Abbreviations are applied ONLY when a title is over the limit, progressively
-// (least-disruptive first), so meaning is preserved as long as possible. In
-// particular "Genuine Leather" stays "Genuine Leather" unless shortening is
-// actually required, in which case it becomes "Genuine Lthr." (never "Gen.").
+// (least-disruptive first), so meaning is preserved as long as possible.
 //
 // Word-boundary note: /\bLeather\b/ does NOT match "Leatherette" (the following
 // "e" is a word char, so there is no boundary), so Leatherette is left intact.
@@ -103,6 +112,24 @@ const PARCHMENT_LT_REMOVED_RULE: Rule = {
   re: /\b(Parchment)\s+Lt\s+(?=Tan\b)/gi,
   to: "$1 ",
   note: "Light modifier removed, Tan kept",
+};
+
+// Replacement fallback (shared by the full and phrase-mode sets so the Variation
+// Matrix and the CSV converter behave identically):
+//   "Replacement Seat Cover" -> "Repl. Seat Cover" -> "Seat Cover"
+// Each step fires only while the title is still over the limit. Removal takes
+// the trailing space with it and applyRule() re-collapses whitespace, so no
+// double spaces or stray punctuation are left behind. The product wording that
+// follows is never touched, so the product meaning survives removal.
+const REPLACEMENT_SHORT_RULE: Rule = {
+  re: /\bReplacement\b/g,
+  to: "Repl.",
+  note: "Replacement shortened to Repl.",
+};
+const REPLACEMENT_REMOVE_RULE: Rule = {
+  re: /\bRepl\.\s*/g,
+  to: "",
+  note: "Replacement removed to meet character limit",
 };
 
 // Approved color modifier abbreviations (the ONLY approved list — no new ones).
@@ -140,9 +167,12 @@ const ABBREVIATIONS: Rule[] = [
   // (applied after "and -> &", so it converts the "&" form to the slash form).
   { re: /Driver & Passenger/g, to: "Driver/Passenger", note: "Used slash format" },
   { re: /Top & Bottom/g, to: "Top/Bottom", note: "Used slash format" },
-  { re: /\bReplacement\b/g, to: "Repl." },
-  { re: /\bGenuine Leather\b/g, to: "Genuine Lthr." },
-  { re: /\bLeather\b/g, to: "Lthr." },
+  // Replacement fallback: shorten first, then (only if STILL over the limit)
+  // drop the word entirely. The product wording that follows ("Seat Cover",
+  // "Cover", "Covers", …) always remains, so the product meaning is kept.
+  REPLACEMENT_SHORT_RULE,
+  REPLACEMENT_REMOVE_RULE,
+  // NOTE: "Leather"/"Leatherette" are protected — no material abbreviation here.
   // Color fallback + modifier abbreviations (only fire when still over the limit).
   // Parchment/Light/Tan order: Light->Lt, then drop Lt, then drop Parchment —
   // "Tan" always survives.
@@ -168,8 +198,11 @@ const PHRASE_ABBREVIATIONS: Rule[] = [
   // component/product reduction still comes from its ordered phrase stages.
   { re: /\bSecond Row\b/gi, to: "2nd Row" },
   { re: /\bCenter Console\b/gi, to: "Console" },
-  { re: /\bGenuine Leather\b/g, to: "Genuine Lthr." },
-  { re: /\bLeather\b/g, to: "Lthr." },
+  // Replacement may be SHORTENED here; its removal is left to the phrase ladder,
+  // whose ordered stages already drop "Replacement" in the designed priority
+  // (… Replacement Seat Covers -> … Replacement Covers -> … Seat Covers -> …).
+  REPLACEMENT_SHORT_RULE,
+  // NOTE: "Leather"/"Leatherette" are protected — no material abbreviation here.
   // Color fallback + modifiers are shared (they affect the color token, not the phrase).
   // Same Parchment/Light/Tan order as the full set — "Tan" always survives.
   PARCHMENT_LIGHT_LT_RULE,
@@ -514,7 +547,7 @@ export function generateForAccount(listing: ListingInput, account: AccountConfig
     // Over 80: the title is shown WITH all entered data preserved (never trimmed
     // to fit). Surface the reason clearly for manual review.
     if (wl.variation.trim()) notes.push("Additional variation preserved; manual shortening needed");
-    else notes.push("Required input preserved; manual shortening needed");
+    notes.push("Required input preserved; manual shortening needed");
     notes.push("Needs manual shortening");
   }
 
@@ -632,7 +665,7 @@ export function generateWithPhraseStages(
   if (!valid) {
     riskFlag = "CHECK";
     if (baseListing.variation.trim()) notes.push("Additional variation preserved; manual shortening needed");
-    else notes.push("Required input preserved; manual shortening needed");
+    notes.push("Required input preserved; manual shortening needed");
     notes.push("Needs manual shortening");
   }
 

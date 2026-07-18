@@ -266,11 +266,20 @@ and the visual color word is **never** removed.
   `CHECK`. Each step is taken only if still needed; fallbacks are recorded in `notes`.
 - Never abbreviates `Genuine` (`Gen.` ✗), `Driver` (`Drvr` ✗), `Passenger`
   (`Pass`/`Pass.`/`Psgr` ✗), or `Bottom` (`Btm` ✗ — uses `Lower`).
-- `Genuine Leather` stays in full unless shortening is required, then becomes
-  `Genuine Lthr.`. Leatherette/Vinyl/Cloth/Suede/MB-Tex/Synthetic Leather are
-  never turned into "Leather".
-- Allowed only when needed: `Perforated→Perf.`, `Leather→Lthr.`,
-  `Replacement→Repl.`, `With→w/`, `Without→w/o`, `And→&`, `Bottom→Lower`,
+- **Protected materials** — `Leather` and `Leatherette` are always written in
+  full and are never abbreviated (`Lthr.` ✗, `Lthr` ✗, `Leath.` ✗) or removed to
+  fit. A title that keeps the correct material is preferred over a shorter one
+  that abbreviates it, so an over-limit title is shown as `Too Long` / `CHECK`
+  instead. A legacy `Lthr.` arriving in an imported CSV is normalized back to
+  `Leather` and never survives into a generated title.
+  Leatherette/Vinyl/Cloth/Suede/MB-Tex/Synthetic Leather are never turned into
+  "Leather".
+- **`Replacement` fallback** (each step only while still over 80):
+  `Replacement`→`Repl.` (note "Replacement shortened to Repl."), then `Repl.`
+  removed (note "Replacement removed to meet character limit"). The product
+  wording (`Seat Cover`/`Seat Covers`/`Cover`/`Covers`) always remains.
+- Allowed only when needed: `Perforated→Perf.`, `Replacement→Repl.`,
+  `With→w/`, `Without→w/o`, `And→&`, `Bottom→Lower`,
   `Backrest→Back`, `Lean Back→Leanback`.
 
 All logic lives in [`src/titleGenerator.ts`](src/titleGenerator.ts).

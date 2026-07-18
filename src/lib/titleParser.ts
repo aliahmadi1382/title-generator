@@ -50,12 +50,35 @@ const COLORS = dedupeByLowest([
 ]).sort((a, b) => b.length - a.length);
 
 // Longest-first so "Genuine Leather" wins over "Leather", etc. Includes the
-// spreadsheet's material list (de-duplicated case-insensitively).
+// spreadsheet's material list (de-duplicated case-insensitively). The legacy
+// "Lthr."/"Lthr" forms are recognised only so they can be normalized back to
+// the full protected word (see MATERIAL_CANONICAL) — they are never emitted.
 const MATERIALS = dedupeByLowest([
-  "Genuine Leather", "Synthetic Leather", "Genuine Lthr.", "Synthetic Lthr.", "Leatherette", "MB-Tex",
-  "Microfiber", "Neoprene", "Velour", "Leather", "Lthr.", "Vinyl", "Cloth", "Suede",
+  "Genuine Leather", "Synthetic Leather", "Genuine Lthr.", "Synthetic Lthr.", "Genuine Lthr",
+  "Synthetic Lthr", "Leatherette", "MB-Tex",
+  "Microfiber", "Neoprene", "Velour", "Leather", "Lthr.", "Lthr", "Vinyl", "Cloth", "Suede",
   ...CATALOG_MATERIALS,
 ]).sort((a, b) => b.length - a.length);
+
+/**
+ * Legacy material abbreviations -> the protected full word. Applied only to a
+ * CONFIDENT material match (the token was matched against the material
+ * vocabulary above), so "Lthr" inside any other field is never rewritten.
+ * "Leatherette" is a DIFFERENT material and is never mapped to "Leather".
+ */
+const MATERIAL_CANONICAL: Record<string, string> = {
+  "genuine lthr.": "Genuine Leather",
+  "genuine lthr": "Genuine Leather",
+  "synthetic lthr.": "Synthetic Leather",
+  "synthetic lthr": "Synthetic Leather",
+  "lthr.": "Leather",
+  lthr: "Leather",
+};
+
+/** Normalize a matched material to its protected canonical spelling. */
+function canonicalMaterial(found: string): string {
+  return MATERIAL_CANONICAL[found.trim().toLowerCase()] ?? found;
+}
 
 const PRODUCTS = [
   "Replacement Seat Covers", "Replacement Seat Cover", "Upholstery Covers", "Upholstery Cover",
@@ -229,7 +252,7 @@ export function parseTitle(title: string): ParseResult {
     make: make.found,
     model,
     position: position.found,
-    material: material.found,
+    material: canonicalMaterial(material.found), // legacy "Lthr." -> "Leather"
     variation: additional.found,
     color: color.found,
     fitment: fit.found || "Fits",
