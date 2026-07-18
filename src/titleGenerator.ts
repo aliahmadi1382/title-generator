@@ -565,12 +565,23 @@ export function generateWithPhraseStages(
   const eaccount: AccountConfig = { ...account, titleStructure: ensureVariationToken(account.titleStructure, baseListing) };
   const rules = withColorReduction(PHRASE_ABBREVIATIONS, baseListing.color, visualColorFor(baseListing.color));
 
+  // The bare "Front Seats" last resort is only accurate when the product is the
+  // plain full-front coverage. An Additional Variation (Headrest, Armrest, …)
+  // changes the coverage, so that stage is skipped — "Front Seat Covers" stays
+  // the floor and the variation token is preserved as usual. If a caller passed
+  // ONLY that stage (degenerate slice), keep the original list rather than
+  // running with no stages at all.
+  const filtered = baseListing.variation.trim()
+    ? phraseStages.filter((p) => p !== "Front Seats")
+    : phraseStages;
+  const stages = filtered.length > 0 ? filtered : phraseStages;
+
   let chosen: PipelineResult | null = null;
   let chosenPhrase = "";
   let chosenIndex = 0;
 
-  for (let i = 0; i < phraseStages.length; i++) {
-    const phrase = phraseStages[i];
+  for (let i = 0; i < stages.length; i++) {
+    const phrase = stages[i];
     const r = runPipeline({ ...baseListing, position: phrase }, eaccount, baseFit, "", false, rules);
     if (r.title.length <= MAX_LENGTH) {
       chosen = r;
@@ -593,7 +604,11 @@ export function generateWithPhraseStages(
   r.abbrevNotes.forEach((n) => notes.push(n)); // color fallback / "Color shortened" notes
   if (chosenIndex > 0) notes.push(`Variation phrase shortened to "${chosenPhrase}"`);
   if (chosenPhrase.includes("/")) notes.push("Used slash format");
-  if (/\bFront\b/.test(chosenPhrase)) notes.push("Used front fallback");
+  // "Front …" phrases without Top/Bottom exist only in the FULL front variation
+  // (Driver & Passenger, Top & Bottom) ladder, so this note is accurate there
+  // and never fires for driver-only / tops-only / bottoms-only / rear stages.
+  if (/^Front\b/.test(chosenPhrase) && !/\b(?:Top|Bottom)\b/.test(chosenPhrase)) notes.push("Used Front Seats fallback");
+  else if (/\bFront\b/.test(chosenPhrase)) notes.push("Used front fallback");
   else if (/\bSide\b/.test(chosenPhrase)) notes.push("Used side fallback");
   if (r.fitmentChanged) notes.push("Fits changed to For");
   if (r.yearChanged) notes.push(`Year shortened to ${r.year}`);

@@ -120,7 +120,10 @@ export const MAIN_VARIATION_PHRASE_STAGES: Record<string, string[]> = {
     "Front Bottom Seat Covers",
     "Front Bottom Covers",
   ],
-  // 9. Driver & Passenger Top & Bottom (full front-cover variation)
+  // 9. Driver & Passenger Top & Bottom (full front-cover variation).
+  // Full 16-stage ladder: "&" forms -> slash Top/Bottom -> slash Top/Lower ->
+  // Front forms -> "Front Seats" (last resort). "Front Seats" is accurate ONLY
+  // here because this variation covers Driver AND Passenger, Top AND Bottom.
   m9: [
     "Driver & Passenger Top & Bottom Replacement Seat Covers",
     "Driver & Passenger Top & Bottom Replacement Covers",
@@ -130,8 +133,13 @@ export const MAIN_VARIATION_PHRASE_STAGES: Record<string, string[]> = {
     "Driver/Passenger Top/Bottom Replacement Covers",
     "Driver/Passenger Top/Bottom Seat Covers",
     "Driver/Passenger Top/Bottom Covers",
+    "Driver/Passenger Top/Lower Replacement Seat Covers",
+    "Driver/Passenger Top/Lower Replacement Covers",
+    "Driver/Passenger Top/Lower Seat Covers",
+    "Driver/Passenger Top/Lower Covers",
     "Front Replacement Seat Covers",
     "Front Replacement Covers",
     "Front Seat Covers",
+    "Front Seats",
   ],
 };

@@ -121,6 +121,55 @@ function productVariantTitle(
 }
 
 /**
+ * Regenerate a MAIN (phrase-stage) variation title starting from a LATER phrase
+ * stage. Staying inside generateWithPhraseStages keeps the whole approved
+ * ladder — including the Front Seat Covers / Front Seats fallback — so an
+ * alternate can never stall at an overlong "Driver/Passenger Top/Lower" form
+ * the way the raw-label path could.
+ */
+function phraseVariantTitle(
+  base: MatrixBaseInput,
+  variation: VariationConfig,
+  account: AccountConfig,
+  stages: string[],
+): MatrixTitle {
+  const listing: ListingInput = { ...baseToListing(base), position: variation.label };
+  const g = generateWithPhraseStages(listing, account, stages);
+  return {
+    ...g,
+    variationId: variation.id,
+    variationName: variation.label,
+    variationType: variation.type,
+    editedTitle: g.title,
+  };
+}
+
+/** Ordered alternate candidates for one account: different approved phrase
+ *  stages for main variations (then, as extra approved patterns, the product
+ *  wordings via the label path — VALID titles only, so the full-front ladder's
+ *  Front fallback can never be bypassed by an overlong label-path title), and
+ *  different product wordings for custom variations. */
+function alternateTitles(
+  base: MatrixBaseInput,
+  variation: VariationConfig,
+  account: AccountConfig,
+): MatrixTitle[] {
+  if (variation.phraseStages && variation.phraseStages.length > 1) {
+    // Effective ladder: with an Additional Variation the bare "Front Seats"
+    // stage is not accurate, so alternates are sliced from the filtered list
+    // (never producing an empty or Front-Seats-only stage list).
+    const ladder = base.additionalVariation.trim()
+      ? variation.phraseStages.filter((p) => p !== "Front Seats")
+      : variation.phraseStages;
+    return [
+      ...ladder.slice(1).map((_, i) => phraseVariantTitle(base, variation, account, ladder.slice(i + 1))),
+      ...PRODUCT_VARIANTS.map((pw) => productVariantTitle(base, variation, account, pw)).filter((c) => c.valid),
+    ];
+  }
+  return PRODUCT_VARIANTS.map((pw) => productVariantTitle(base, variation, account, pw));
+}
+
+/**
  * Enforce cross-account uniqueness for each variation across the account blocks.
  * `blocks[i]` corresponds to `accounts[i]`; `titles[j]` to `variations[j]`.
  */
@@ -146,22 +195,22 @@ function dedupeAcrossAccounts(
       });
 
       if (conflict) {
-        // Try accurate product-wording alternates until one is safely unique.
-        let fixed: MatrixTitle | null = null;
-        for (const pw of PRODUCT_VARIANTS) {
-          const cand = productVariantTitle(base, variation, account, pw);
-          const clash = accepted.some((a) => {
-            const r = compareTitles(a, cand.editedTitle);
+        // Try approved alternates (later phrase stages for main variations,
+        // product wordings for custom ones). Prefer an alternate that both
+        // fits 80 chars AND is unique; failing that, accept a unique one that
+        // is over the limit (it keeps all data and is flagged by length).
+        const candidates = alternateTitles(base, variation, account);
+        const clashes = (title: string) =>
+          accepted.some((a) => {
+            const r = compareTitles(a, title);
             return r.duplicate || r.similar;
           });
-          if (!clash) {
-            fixed = { ...cand, notes: appendNote(cand.notes, "Duplicate avoided with alternate account pattern") };
-            break;
-          }
-        }
+        const fixed =
+          candidates.find((c) => c.valid && !clashes(c.editedTitle)) ??
+          candidates.find((c) => !clashes(c.editedTitle));
 
         if (fixed) {
-          t = fixed;
+          t = { ...fixed, notes: appendNote(fixed.notes, "Duplicate avoided with alternate account pattern") };
         } else {
           // Could not make it safely unique — keep the accurate title, flag CHECK.
           const r = compareTitles(conflict, t.editedTitle);
@@ -169,7 +218,7 @@ function dedupeAcrossAccounts(
           t = {
             ...t,
             riskFlag: "CHECK",
-            notes: appendNote(appendNote(t.notes, msg), "Manual review needed for uniqueness or length"),
+            notes: appendNote(appendNote(t.notes, msg), "Manual review needed for cross-account similarity"),
           };
         }
         blocks[bi].titles[vi] = t;

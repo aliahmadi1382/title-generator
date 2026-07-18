@@ -48,11 +48,50 @@ export function normalizeTitle(raw: string): string {
     .replace(/\b2nd\b/g, "second")
     .replace(/\bmed\b/g, "medium")
     .replace(/\bdk\b/g, "dark")
-    .replace(/\blt\b/g, "light");
+    .replace(/\blt\b/g, "light")
+    // Singular/plural product wording ("Seat Covers" == "Seat Cover").
+    .replace(/\bcovers\b/g, "cover")
+    .replace(/\bseats\b/g, "seat")
+    .replace(/\btops\b/g, "top")
+    .replace(/\bbottoms\b/g, "bottom");
+
+  // Year-range forms are equivalent: "2013-17" / "13-17" == "2013-2017"
+  // (2-digit years <= 39 read as 20xx, else 19xx — automotive-range heuristic).
+  s = s.replace(/\b((?:19|20)\d{2})\s*-\s*(\d{2})\b/g, (_m, a: string, b: string) => `${a}-${a.slice(0, 2)}${b}`);
+  s = s.replace(/\b(\d{2})\s*-\s*(\d{2})\b/g, (_m, a: string, b: string) => {
+    const c = parseInt(a, 10) <= 39 ? "20" : "19";
+    return `${c}${a}-${c}${b}`;
+  });
 
   // Strip any remaining punctuation and collapse whitespace.
   s = s.replace(/[^a-z0-9]+/g, " ");
   return s.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Approved-difference test. Two normalized titles are MEANINGFULLY different
+ * when a real word was added/removed (an approved product-phrase / descriptor
+ * difference, e.g. "replacement" present in only one) or when the same words
+ * appear in a different order (an approved alternate account structure).
+ * Differences made only of year/number tokens are NOT meaningful — a title
+ * that varies only in year form is still practically the same title.
+ */
+function hasApprovedDifference(na: string, nb: string): boolean {
+  if (na === nb) return false;
+  const ta = na.split(" ");
+  const tb = nb.split(" ");
+  const count = (arr: string[]) => {
+    const m = new Map<string, number>();
+    for (const t of arr) m.set(t, (m.get(t) ?? 0) + 1);
+    return m;
+  };
+  const ca = count(ta);
+  const cb = count(tb);
+  const diff: string[] = [];
+  for (const [t, n] of ca) if (n > (cb.get(t) ?? 0)) diff.push(t);
+  for (const [t, n] of cb) if (n > (ca.get(t) ?? 0)) diff.push(t);
+  if (diff.length > 0) return diff.some((t) => !/^\d{2,4}(?:-\d{2,4})?$/.test(t));
+  return true; // equal words, different order — approved reordering
 }
 
 /** Classic Levenshtein edit distance (iterative, single row buffer). */
@@ -92,9 +131,13 @@ export function titleSimilarity(a: string, b: string): number {
 }
 
 /**
- * Compare two titles. `duplicate` = identical after normalization (only cosmetic
- * / abbreviation differences). `similar` = at or above the similarity threshold
- * (practically the same). A duplicate is always also similar.
+ * Compare two titles. `duplicate` = identical after normalization (only
+ * cosmetic / abbreviation / year-form differences). `similar` = at or above the
+ * similarity threshold AND without any approved meaningful difference — a real
+ * word added/removed (product phrase, descriptor) or a different field order is
+ * an APPROVED way to differentiate accounts and is never flagged, so legitimate
+ * titles aren't penalized for naturally sharing the required product info.
+ * A duplicate is always also similar.
  */
 export function compareTitles(
   a: string,
@@ -105,7 +148,7 @@ export function compareTitles(
   const nb = normalizeTitle(b);
   if (na === nb) return { duplicate: true, similar: true, score: 1 };
   const score = titleSimilarity(a, b);
-  return { duplicate: false, similar: score >= threshold, score };
+  return { duplicate: false, similar: score >= threshold && !hasApprovedDifference(na, nb), score };
 }
 
 /** True when `candidate` duplicates or is too similar to any accepted title. */
