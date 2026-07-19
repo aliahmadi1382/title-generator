@@ -1,12 +1,2443 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Seat Cover Title Generator</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<title>FocusBoard</title>
+<style>
+/* =========================================================================
+   FocusBoard — single-file personal Kanban board
+   CSS is organized in labeled sections.
+   ========================================================================= */
+
+/* ---------- 1. Reset & base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.45;
+  min-height: 100dvh;
+  overflow-x: hidden; /* prevent accidental page-level horizontal overflow */
+}
+button { font-family: inherit; cursor: pointer; }
+input, textarea, select, button { font-family: inherit; }
+[hidden] { display: none !important; } /* ensure hidden attr wins over display rules */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* ---------- 2. Theme tokens ---------- */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-2: #eef0f4;
+  --surface-3: #e6e9ef;
+  --border: #dfe3ea;
+  --border-strong: #c9cfdb;
+  --text: #1e2330;
+  --text-muted: #64707f;
+  --text-faint: #8b95a5;
+  --accent: #5b5bd6;
+  --accent-hover: #4a4ac0;
+  --accent-soft: #ececfb;
+  --accent-contrast: #ffffff;
+  --danger: #dc2f45;
+  --danger-soft: #fdecee;
+  --warn: #d9820a;
+  --warn-soft: #fdf1df;
+  --success: #14915b;
+  --success-soft: #e5f5ec;
+  --info: #1b7fce;
+  --shadow-sm: 0 1px 2px rgba(20, 25, 40, .06), 0 1px 3px rgba(20, 25, 40, .05);
+  --shadow-md: 0 4px 12px rgba(20, 25, 40, .10);
+  --shadow-lg: 0 12px 32px rgba(20, 25, 40, .18);
+  --radius: 10px;
+  --radius-sm: 7px;
+  --radius-lg: 16px;
+  --header-h: 58px;
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+:root[data-theme="dark"] {
+  --bg: #0e1117;
+  --surface: #171b23;
+  --surface-2: #1e232d;
+  --surface-3: #262c38;
+  --border: #2a3140;
+  --border-strong: #39414f;
+  --text: #e7eaf0;
+  --text-muted: #9aa4b4;
+  --text-faint: #717c8c;
+  --accent: #7c7cf0;
+  --accent-hover: #9090f5;
+  --accent-soft: #23233b;
+  --accent-contrast: #ffffff;
+  --danger: #f2596d;
+  --danger-soft: #35222a;
+  --warn: #eaa53d;
+  --warn-soft: #33291a;
+  --success: #37c47f;
+  --success-soft: #1a2f26;
+  --info: #4aa8ec;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, .4);
+  --shadow-lg: 0 12px 34px rgba(0, 0, 0, .55);
+}
+
+/* ---------- 3. Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  padding: 9px 13px;
+  border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500;
+  min-height: 40px;
+  transition: background .15s, border-color .15s, transform .05s, box-shadow .15s;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary {
+  background: var(--accent); color: var(--accent-contrast); border-color: transparent;
+  box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: var(--surface-2); }
+.btn-danger { color: var(--danger); border-color: var(--border-strong); }
+.btn-danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+.btn-icon {
+  min-width: 40px; min-height: 40px; padding: 8px;
+  border-color: transparent; background: transparent;
+}
+.btn-icon:hover { background: var(--surface-2); }
+.btn-sm { min-height: 34px; padding: 6px 10px; font-size: 13px; }
+.btn-block { width: 100%; }
+.icon { width: 18px; height: 18px; display: inline-block; flex: none; }
+.icon-sm { width: 15px; height: 15px; }
+
+/* ---------- 4. App header (sticky) ---------- */
+.app-header {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px;
+  padding-top: calc(8px + var(--sat));
+  padding-left: calc(16px + var(--sal));
+  padding-right: calc(16px + var(--sar));
+  min-height: var(--header-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.brand { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.brand-logo {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-weight: 700; font-size: 18px; letter-spacing: -.2px; color: var(--text);
+}
+.brand-mark {
+  width: 26px; height: 26px; border-radius: 7px; flex: none;
+  background: linear-gradient(135deg, var(--accent), #8b8bff);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 800; font-size: 15px;
+}
+.brand-board {
+  font-size: 13px; color: var(--text-muted); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw;
+}
+.header-spacer { flex: 1 1 auto; }
+.header-actions { display: flex; align-items: center; gap: 6px; }
+.only-mobile { display: none !important; }
+
+/* segmented control (language / theme) */
+.seg { display: inline-flex; background: var(--surface-2); border-radius: var(--radius-sm); padding: 2px; }
+.seg button {
+  border: none; background: transparent; color: var(--text-muted);
+  padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 600; min-height: 32px;
+}
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+
+/* ---------- 5. Layout ---------- */
+.app-main {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px 16px 16px;
+  padding-left: calc(16px + var(--sal));
+  padding-right: calc(16px + var(--sar));
+}
+
+/* ---------- 6. Summary cards ---------- */
+.summary {
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px;
+}
+.stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column; gap: 2px; min-width: 0;
+}
+.stat-value { font-size: 22px; font-weight: 700; line-height: 1.1; }
+.stat-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.stat.accent .stat-value { color: var(--accent); }
+.stat.warn .stat-value { color: var(--warn); }
+.stat.danger .stat-value { color: var(--danger); }
+.stat.success .stat-value { color: var(--success); }
+.stat-progress {
+  margin-top: 6px; height: 6px; background: var(--surface-2);
+  border-radius: 99px; overflow: hidden;
+}
+.stat-progress > span { display: block; height: 100%; background: var(--success); border-radius: 99px; transition: width .3s; }
+
+/* ---------- 7. Toolbar ---------- */
+.toolbar { display: flex; flex-direction: column; gap: 10px; }
+.toolbar-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.search-wrap { position: relative; flex: 1 1 240px; min-width: 180px; }
+.search-wrap > .icon {
+  position: absolute; inset-inline-start: 11px; top: 50%; transform: translateY(-50%);
+  color: var(--text-faint); pointer-events: none;
+}
+.search-input {
+  width: 100%; padding: 10px 12px; padding-inline-start: 36px;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text); font-size: 16px; min-height: 42px;
+}
+.search-clear {
+  position: absolute; inset-inline-end: 6px; top: 50%; transform: translateY(-50%);
+  border: none; background: transparent; color: var(--text-faint);
+  width: 30px; height: 30px; border-radius: 6px; display: none;
+}
+.search-wrap.has-value .search-clear { display: inline-flex; align-items: center; justify-content: center; }
+.control {
+  padding: 9px 11px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text); font-size: 14px; min-height: 42px;
+}
+.control-label { display: inline-flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--text-muted); font-weight: 600; }
+
+/* active filter chips */
+.active-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.active-filters:empty { display: none; }
+.fchip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent-soft); color: var(--accent); border: 1px solid transparent;
+  padding: 5px 6px 5px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 600;
+  min-height: 30px;
+}
+.fchip button {
+  border: none; background: transparent; color: inherit; display: inline-flex;
+  align-items: center; justify-content: center; width: 20px; height: 20px;
+  border-radius: 99px; padding: 0;
+}
+.fchip button:hover { background: rgba(0, 0, 0, .08); }
+
+/* mobile filter/sort trigger buttons */
+.filter-triggers { display: none; gap: 8px; width: 100%; }
+.filter-triggers .btn { flex: 1; }
+.badge-count {
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px;
+  background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* ---------- 8. Mobile column navigation ---------- */
+.mcol-nav { display: none; flex-direction: column; gap: 8px; }
+.mcol-strip { display: flex; align-items: center; gap: 6px; }
+.mcol-chips {
+  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  flex: 1 1 auto; padding: 2px; scroll-snap-type: x proximity;
+}
+.mcol-chips::-webkit-scrollbar { display: none; }
+.mcol-chip {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  border: 1px solid var(--border-strong); background: var(--surface);
+  color: var(--text-muted); padding: 7px 12px; border-radius: 99px;
+  font-size: 13px; font-weight: 600; min-height: 38px; flex: none;
+}
+.mcol-chip .dot { width: 9px; height: 9px; border-radius: 99px; flex: none; }
+.mcol-chip[aria-current="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.mcol-chip .cnt {
+  background: var(--surface-2); color: var(--text-muted); border-radius: 99px;
+  min-width: 18px; height: 18px; padding: 0 4px; font-size: 11px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.mcol-chip[aria-current="true"] .cnt { background: var(--accent); color: #fff; }
+.mcol-arrow { flex: none; }
+.mcol-viewtoggle { display: flex; gap: 6px; }
+
+/* ---------- 9. Board & columns ---------- */
+.board {
+  display: flex; gap: 14px; align-items: flex-start;
+  overflow-x: auto; overflow-y: visible;
+  padding: 2px 2px 14px; scroll-behavior: smooth;
+  min-height: 40vh;
+}
+.column {
+  flex: 0 0 300px; width: 300px; max-width: 300px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); display: flex; flex-direction: column;
+  max-height: calc(100dvh - var(--header-h) - 40px);
+  border-top: 3px solid var(--col-color, var(--accent));
+}
+.column.collapsed { flex-basis: 56px; width: 56px; }
+.column.drop-target { outline: 2px dashed var(--accent); outline-offset: -2px; background: var(--accent-soft); }
+.col-head {
+  display: flex; align-items: center; gap: 8px; padding: 10px 10px 8px;
+}
+.col-color-dot { width: 12px; height: 12px; border-radius: 99px; flex: none; background: var(--col-color, var(--accent)); }
+.col-title {
+  font-weight: 700; font-size: 14.5px; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.col-count {
+  background: var(--surface-3); color: var(--text-muted); border-radius: 99px;
+  min-width: 20px; height: 20px; padding: 0 6px; font-size: 12px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+}
+.col-head-actions { display: flex; align-items: center; gap: 2px; flex: none; }
+.column.collapsed .col-head { flex-direction: column; height: 100%; padding: 10px 6px; }
+.column.collapsed .col-title { writing-mode: vertical-rl; white-space: nowrap; max-height: 60%; }
+.column.collapsed .col-head-actions,
+.column.collapsed .col-quickadd { display: none; }
+.column.collapsed .col-body { display: none; }
+
+.col-body {
+  display: flex; flex-direction: column; gap: 8px; padding: 4px 10px 10px;
+  overflow-y: auto; flex: 1; min-height: 20px;
+}
+.col-quickadd { padding: 0 10px 10px; }
+.col-quickadd .btn {
+  width: 100%; justify-content: center; color: var(--text-muted);
+  border-style: dashed; background: transparent;
+}
+.col-quickadd .btn:hover { color: var(--accent); border-color: var(--accent); }
+
+.col-empty {
+  text-align: center; color: var(--text-faint); font-size: 13px;
+  padding: 18px 8px; border: 1px dashed var(--border-strong); border-radius: var(--radius);
+}
+
+/* ---------- 10. Task cards ---------- */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 11px; box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column; gap: 8px; position: relative;
+  transition: box-shadow .15s, border-color .15s, opacity .15s;
+}
+.card:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+.card.dragging { opacity: .45; }
+.card.completed { opacity: .72; }
+.card.completed .card-title { text-decoration: line-through; color: var(--text-muted); }
+.card.overdue { border-inline-start: 3px solid var(--danger); }
+.card-top { display: flex; align-items: flex-start; gap: 8px; }
+.drag-handle {
+  cursor: grab; color: var(--text-faint); flex: none; padding: 2px; margin: -2px;
+  touch-action: none; border-radius: 5px;
+}
+.drag-handle:active { cursor: grabbing; }
+.card-title {
+  font-size: 14px; font-weight: 600; flex: 1; min-width: 0;
+  overflow-wrap: anywhere; word-break: break-word; /* wrap long titles fully */
+}
+.card-check {
+  flex: none; width: 22px; height: 22px; border-radius: 6px;
+  border: 1.5px solid var(--border-strong); background: var(--surface);
+  display: inline-flex; align-items: center; justify-content: center; color: transparent;
+  padding: 0;
+}
+.card.completed .card-check { background: var(--success); border-color: var(--success); color: #fff; }
+.card-kebab { flex: none; }
+.card-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 600;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text-muted);
+  max-width: 100%;
+}
+.pill .pico { font-size: 11px; line-height: 1; }
+.pill.prio-low { color: var(--success); background: var(--success-soft); border-color: transparent; }
+.pill.prio-medium { color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); border-color: transparent; }
+.pill.prio-high { color: var(--warn); background: var(--warn-soft); border-color: transparent; }
+.pill.prio-urgent { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.pill.due.overdue { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
+.pill.due.today { color: var(--warn); background: var(--warn-soft); border-color: transparent; }
+.pill.checklist .bar {
+  width: 34px; height: 5px; border-radius: 99px; background: var(--surface-3); overflow: hidden; display: inline-block;
+}
+.pill.checklist .bar > span { display: block; height: 100%; background: var(--success); }
+.labels { display: flex; flex-wrap: wrap; gap: 5px; }
+.label-tag {
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px;
+  background: var(--accent-soft); color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 11. Dialog / modal / sheet ---------- */
+.overlay {
+  position: fixed; inset: 0; z-index: 100; display: none;
+  background: rgba(15, 18, 26, .5);
+  align-items: center; justify-content: center; padding: 20px;
+}
+.overlay.open { display: flex; }
+.dialog {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  width: 100%; max-width: 560px; max-height: calc(100dvh - 40px);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.dialog.narrow { max-width: 420px; }
+.dialog-head {
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+  border-bottom: 1px solid var(--border); flex: none;
+}
+.dialog-title { font-size: 17px; font-weight: 700; flex: 1; min-width: 0; }
+.dialog-body { padding: 16px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+.dialog-foot {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  padding: 12px 16px; padding-bottom: calc(12px + var(--sab));
+  border-top: 1px solid var(--border); flex: none; background: var(--surface);
+}
+.dialog-foot .spacer { flex: 1; }
+
+/* form */
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+.req { color: var(--danger); }
+.input, .textarea, .select {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); background: var(--surface); color: var(--text);
+  font-size: 16px; /* >=16px avoids mobile zoom */
+}
+.textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
+.input:focus, .textarea:focus, .select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.field-error { color: var(--danger); font-size: 12.5px; margin-top: 5px; display: none; }
+.field.invalid .input, .field.invalid .textarea, .field.invalid .select { border-color: var(--danger); }
+.field.invalid .field-error { display: block; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.hint { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
+
+/* checklist editor */
+.chk-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 8px; }
+.chk-item { display: flex; align-items: center; gap: 8px; }
+.chk-item input[type=checkbox] { width: 20px; height: 20px; flex: none; accent-color: var(--accent); }
+.chk-item .input { flex: 1; padding: 8px 10px; }
+.chk-item.done .input { text-decoration: line-through; color: var(--text-muted); }
+
+/* priority picker (color-independent, radio buttons with text) */
+.prio-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.prio-opt {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px;
+  border: 1px solid var(--border-strong); border-radius: 99px; font-size: 13px; font-weight: 600;
+  background: var(--surface); color: var(--text-muted); min-height: 38px; position: relative;
+}
+.prio-opt input { position: absolute; opacity: 0; width: 0; height: 0; }
+.prio-opt:has(input:checked) { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.prio-opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* color swatches */
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch {
+  width: 34px; height: 34px; border-radius: 8px; border: 2px solid transparent; position: relative;
+  padding: 0;
+}
+.swatch[aria-pressed="true"] { border-color: var(--text); box-shadow: 0 0 0 2px var(--surface) inset; }
+
+/* detail view */
+.detail-row { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.detail-row:last-child { border-bottom: none; }
+.detail-key { flex: 0 0 34%; font-size: 13px; color: var(--text-muted); font-weight: 600; }
+.detail-val { flex: 1; font-size: 14px; overflow-wrap: anywhere; }
+.detail-desc { white-space: pre-wrap; }
+.detail-checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.detail-checklist li { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.detail-checklist li.done { color: var(--text-muted); text-decoration: line-through; }
+.detail-checklist input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+
+/* generic menu (popover) */
+.menu {
+  position: fixed; z-index: 120; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 6px; min-width: 200px;
+  max-height: 70vh; overflow-y: auto; display: none;
+}
+.menu.open { display: block; }
+.menu button, .menu a {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: start;
+  border: none; background: transparent; color: var(--text); padding: 10px 10px;
+  border-radius: var(--radius-sm); font-size: 14px; min-height: 42px; text-decoration: none;
+}
+.menu button:hover, .menu a:hover { background: var(--surface-2); }
+.menu button.danger { color: var(--danger); }
+.menu .menu-sep { height: 1px; background: var(--border); margin: 5px 4px; }
+.menu .menu-label { font-size: 11px; font-weight: 700; color: var(--text-faint); padding: 8px 10px 4px; text-transform: uppercase; letter-spacing: .04em; }
+
+/* ---------- 12. Mobile menu / bottom sheet ---------- */
+.sheet { position: fixed; inset: 0; z-index: 110; display: none; }
+.sheet.open { display: block; }
+.sheet-backdrop { position: absolute; inset: 0; background: rgba(15, 18, 26, .5); }
+.sheet-panel {
+  position: absolute; background: var(--surface); display: flex; flex-direction: column;
+  box-shadow: var(--shadow-lg);
+}
+/* side drawer variant (mobile menu) */
+.sheet.drawer .sheet-panel {
+  top: 0; bottom: 0; inset-inline-end: 0; width: min(88vw, 340px);
+  padding-top: var(--sat); padding-bottom: var(--sab);
+  border-inline-start: 1px solid var(--border);
+}
+/* bottom sheet variant (filters) */
+.sheet.bottom .sheet-panel {
+  inset-inline: 0; bottom: 0; max-height: 88dvh; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-top: 1px solid var(--border);
+}
+.sheet-head {
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+  border-bottom: 1px solid var(--border); flex: none;
+}
+.sheet-title { font-size: 16px; font-weight: 700; flex: 1; }
+.sheet-body { padding: 14px 16px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+.sheet-foot {
+  display: flex; gap: 8px; padding: 12px 16px; padding-bottom: calc(12px + var(--sab));
+  border-top: 1px solid var(--border); flex: none; background: var(--surface);
+}
+.sheet-foot .btn { flex: 1; }
+.menu-section { margin-bottom: 6px; }
+.menu-section .menu-label { font-size: 11px; font-weight: 700; color: var(--text-faint); padding: 10px 4px 6px; text-transform: uppercase; letter-spacing: .04em; }
+
+/* ---------- 13. Floating action button ---------- */
+.fab {
+  position: fixed; z-index: 45; display: none;
+  inset-inline-end: calc(16px + var(--sar)); bottom: calc(16px + var(--sab));
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--accent); color: #fff; border: none;
+  box-shadow: var(--shadow-lg); align-items: center; justify-content: center;
+}
+.fab:active { transform: translateY(1px); }
+
+/* ---------- 14. Toast ---------- */
+.toast-wrap {
+  position: fixed; z-index: 200; bottom: calc(80px + var(--sab)); inset-inline: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none;
+}
+.toast {
+  background: var(--text); color: var(--bg); padding: 11px 16px; border-radius: 99px;
+  font-size: 13.5px; font-weight: 600; box-shadow: var(--shadow-lg); max-width: 90vw;
+  display: flex; align-items: center; gap: 8px;
+}
+.toast.err { background: var(--danger); color: #fff; }
+.toast.ok { background: var(--success); color: #fff; }
+
+/* ---------- 15. Empty state (whole board) ---------- */
+.board-empty { width: 100%; text-align: center; padding: 40px 16px; color: var(--text-muted); }
+.board-empty h3 { margin: 8px 0 4px; color: var(--text); }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* all-tasks list rendering */
+.list-group-label {
+  font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: .04em; padding: 6px 2px 2px; display: flex; align-items: center; gap: 8px;
+}
+.list-group-label .dot { width: 9px; height: 9px; border-radius: 99px; }
+
+/* ---------- 16. Responsive: tablet ---------- */
+@media (max-width: 1024px) {
+  .summary { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ---------- 17. Responsive: mobile ---------- */
+@media (max-width: 768px) {
+  :root { --header-h: 54px; }
+  .only-mobile { display: inline-flex !important; }
+  .only-desktop { display: none !important; }
+  .app-main { padding: 10px 10px 90px; }
+  .summary { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat { padding: 10px 11px; }
+  .stat-value { font-size: 19px; }
+  .desktop-filters { display: none; }
+  .filter-triggers { display: flex; }
+  .mcol-nav { display: flex; }
+  .fab { display: inline-flex; }
+
+  /* Full-width scroll-snap columns */
+  .board { scroll-snap-type: x mandatory; gap: 0; padding-bottom: 12px; }
+  .column {
+    flex: 0 0 100%; width: 100%; max-width: 100%;
+    scroll-snap-align: center; scroll-snap-stop: always;
+    margin-inline: 4px; max-height: none;
+  }
+  .column:first-child { margin-inline-start: 0; }
+  .column:last-child { margin-inline-end: 0; }
+  .column.collapsed { flex-basis: 100%; width: 100%; }
+  .column.collapsed .col-head { flex-direction: row; height: auto; padding: 10px; }
+  .column.collapsed .col-title { writing-mode: horizontal-tb; max-height: none; }
+  .column.collapsed .col-head-actions { display: flex; }
+  .card { padding: 12px; }
+  .card-title { font-size: 15px; }
+  .drag-handle { display: none; } /* touch uses actions menu instead */
+
+  /* list (all tasks) view: stack cards full width, disable snap */
+  .board.list-view { flex-direction: column; gap: 10px; scroll-snap-type: none; overflow-x: hidden; }
+  .board.list-view .column { display: none; }
+
+  /* Dialogs become full-screen sheets */
+  .overlay { padding: 0; align-items: stretch; justify-content: stretch; }
+  .dialog, .dialog.narrow {
+    max-width: none; width: 100%; max-height: none; height: 100dvh; border-radius: 0; border: none;
+  }
+  .dialog-head { padding-top: calc(14px + var(--sat)); }
+  .field-row { grid-template-columns: 1fr; } /* single-column form */
+  .search-wrap { flex-basis: 100%; }
+}
+
+@media (max-width: 380px) {
+  .summary { grid-template-columns: 1fr; }
+}
+
+/* ---------- 18. Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<!-- ===================== App shell ===================== -->
+<header class="app-header">
+  <button class="btn-icon only-mobile" id="btnMobileMenuOpen" aria-label="Open menu" data-i18n-aria="menu">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  </button>
+  <div class="brand">
+    <span class="brand-logo"><span class="brand-mark">F</span><span>FocusBoard</span></span>
+    <span class="brand-board" id="brandBoard"></span>
+  </div>
+  <div class="header-spacer"></div>
+  <div class="header-actions only-desktop">
+    <div class="seg" role="group" aria-label="Language" id="langSeg">
+      <button data-lang="en" type="button">EN</button>
+      <button data-lang="fa" type="button">فا</button>
+    </div>
+    <button class="btn-icon" id="btnTheme" aria-label="Toggle theme" data-i18n-aria="theme"></button>
+    <button class="btn-icon" id="btnData" aria-label="Data menu" data-i18n-aria="data" aria-haspopup="menu">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+    </button>
+    <button class="btn btn-primary" id="btnAddTask">
+      <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      <span data-i18n="addTask"></span>
+    </button>
+  </div>
+  <div class="header-actions only-mobile">
+    <button class="btn-icon" id="btnAddTaskMobile" aria-label="Add task" data-i18n-aria="addTask">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="app-main">
+  <!-- Summary -->
+  <section class="summary" id="summary" aria-label="Summary"></section>
+
+  <!-- Toolbar -->
+  <section class="toolbar" aria-label="Search and filters">
+    <div class="toolbar-row">
+      <div class="search-wrap" id="searchWrap">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+        <input type="search" class="search-input" id="searchInput" autocomplete="off" />
+        <button class="search-clear" id="searchClear" aria-label="Clear search" data-i18n-aria="clearSearch">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="toolbar-row desktop-filters only-desktop" id="desktopFilters"></div>
+      <div class="filter-triggers">
+        <button class="btn" id="btnFiltersSheet"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span data-i18n="filters"></span><span class="badge-count" id="filterCountBadge" hidden>0</span></button>
+      </div>
+    </div>
+    <div class="active-filters" id="activeFilters"></div>
+  </section>
+
+  <!-- Mobile column navigation -->
+  <nav class="mcol-nav" aria-label="Columns">
+    <div class="mcol-strip">
+      <button class="btn-icon mcol-arrow" id="mcolPrev" aria-label="Previous column" data-i18n-aria="prevColumn">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="mcol-chips" id="mcolChips"></div>
+      <button class="btn-icon mcol-arrow" id="mcolNext" aria-label="Next column" data-i18n-aria="nextColumn">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+    <div class="mcol-viewtoggle">
+      <button class="btn btn-sm" id="btnAllTasks" style="flex:1"><span data-i18n="allTasks"></span></button>
+      <button class="btn btn-sm" id="btnAddColumnMobile" style="flex:1"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="addColumn"></span></button>
+    </div>
+  </nav>
+
+  <!-- Board -->
+  <section class="board" id="board" aria-label="Kanban board"></section>
+</main>
+
+<!-- Floating add button (mobile) -->
+<button class="fab only-mobile" id="fab" aria-label="Add task" data-i18n-aria="addTask">
+  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<!-- ===================== Task form dialog ===================== -->
+<div class="overlay" id="taskOverlay" role="dialog" aria-modal="true" aria-labelledby="taskFormTitle">
+  <div class="dialog">
+    <div class="dialog-head">
+      <h2 class="dialog-title" id="taskFormTitle"></h2>
+      <button class="btn-icon" data-close="task" aria-label="Close" data-i18n-aria="close">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <form id="taskForm" novalidate>
+        <div class="field" id="f-title-wrap">
+          <label for="f-title"><span data-i18n="title"></span> <span class="req">*</span></label>
+          <input class="input" id="f-title" name="title" maxlength="200" />
+          <div class="field-error" id="f-title-error" data-i18n="titleRequired"></div>
+        </div>
+        <div class="field">
+          <label for="f-desc" data-i18n="description"></label>
+          <textarea class="textarea" id="f-desc" name="description" maxlength="4000"></textarea>
+        </div>
+        <div class="field">
+          <label data-i18n="priority"></label>
+          <div class="prio-picker" id="f-prio" role="radiogroup" aria-label="Priority"></div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="f-due" data-i18n="dueDate"></label>
+            <input class="input" id="f-due" name="due" type="date" />
+          </div>
+          <div class="field">
+            <label for="f-col" data-i18n="column"></label>
+            <select class="select" id="f-col" name="column"></select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-labels" data-i18n="labels"></label>
+          <input class="input" id="f-labels" name="labels" />
+          <div class="hint" data-i18n="labelsHint"></div>
+        </div>
+        <div class="field">
+          <label data-i18n="checklist"></label>
+          <div class="chk-list" id="f-checklist"></div>
+          <button type="button" class="btn btn-sm" id="btnAddChk"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="addChecklistItem"></span></button>
+        </div>
+      </form>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn btn-danger" id="btnDeleteFromForm" style="display:none" data-i18n="delete"></button>
+      <span class="spacer"></span>
+      <button class="btn" data-close="task" data-i18n="cancel"></button>
+      <button class="btn btn-primary" id="btnSaveTask" data-i18n="save"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Task detail dialog ===================== -->
+<div class="overlay" id="detailOverlay" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+  <div class="dialog">
+    <div class="dialog-head">
+      <h2 class="dialog-title" id="detailTitle"></h2>
+      <button class="btn-icon" data-close="detail" aria-label="Close" data-i18n-aria="close">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="dialog-body" id="detailBody"></div>
+    <div class="dialog-foot">
+      <button class="btn btn-danger" id="btnDetailDelete" data-i18n="delete"></button>
+      <span class="spacer"></span>
+      <button class="btn" id="btnDetailDup" data-i18n="duplicate"></button>
+      <button class="btn btn-primary" id="btnDetailEdit" data-i18n="edit"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Column dialog ===================== -->
+<div class="overlay" id="colOverlay" role="dialog" aria-modal="true" aria-labelledby="colTitle">
+  <div class="dialog narrow">
+    <div class="dialog-head">
+      <h2 class="dialog-title" id="colTitle"></h2>
+      <button class="btn-icon" data-close="col" aria-label="Close" data-i18n-aria="close">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <form id="colForm" novalidate>
+        <div class="field" id="c-name-wrap">
+          <label for="c-name"><span data-i18n="columnName"></span> <span class="req">*</span></label>
+          <input class="input" id="c-name" maxlength="60" />
+          <div class="field-error" id="c-name-error" data-i18n="columnNameRequired"></div>
+        </div>
+        <div class="field">
+          <label data-i18n="columnColor"></label>
+          <div class="swatches" id="c-swatches"></div>
+        </div>
+      </form>
+    </div>
+    <div class="dialog-foot">
+      <span class="spacer"></span>
+      <button class="btn" data-close="col" data-i18n="cancel"></button>
+      <button class="btn btn-primary" id="btnSaveCol" data-i18n="save"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Confirm dialog ===================== -->
+<div class="overlay" id="confirmOverlay" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMsg">
+  <div class="dialog narrow">
+    <div class="dialog-head"><h2 class="dialog-title" id="confirmTitle"></h2></div>
+    <div class="dialog-body"><p id="confirmMsg" style="margin:0"></p></div>
+    <div class="dialog-foot">
+      <span class="spacer"></span>
+      <button class="btn" id="confirmCancel" data-i18n="cancel"></button>
+      <button class="btn btn-primary" id="confirmOk"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Filters bottom sheet (mobile) ===================== -->
+<div class="sheet bottom" id="filterSheet" role="dialog" aria-modal="true" aria-labelledby="filterSheetTitle">
+  <div class="sheet-backdrop" data-close="filter"></div>
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 class="sheet-title" id="filterSheetTitle" data-i18n="filtersAndSort"></h2>
+      <button class="btn-icon" data-close="filter" aria-label="Close" data-i18n-aria="close">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="filterSheetBody"></div>
+    <div class="sheet-foot">
+      <button class="btn" id="btnSheetClear" data-i18n="clearFilters"></button>
+      <button class="btn btn-primary" id="btnSheetApply" data-i18n="apply"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Mobile menu drawer ===================== -->
+<div class="sheet drawer" id="mobileMenu" role="dialog" aria-modal="true" aria-labelledby="mobileMenuTitle">
+  <div class="sheet-backdrop" data-close="mmenu"></div>
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 class="sheet-title" id="mobileMenuTitle" data-i18n="menu"></h2>
+      <button class="btn-icon" data-close="mmenu" aria-label="Close" data-i18n-aria="close">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="mobileMenuBody"></div>
+  </div>
+</div>
+
+<!-- ===================== Generic popover menu (task/column actions) ===================== -->
+<div class="menu" id="popMenu" role="menu"></div>
+
+<!-- Data menu (desktop) -->
+<div class="menu" id="dataMenu" role="menu"></div>
+
+<!-- Toasts -->
+<div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
+
+<!-- Hidden file input for import -->
+<input type="file" id="importFile" accept="application/json,.json" style="display:none" />
+
+<script>
+"use strict";
+/* =========================================================================
+   FocusBoard application logic.
+   Organized into: translations, storage, state, helpers, rendering,
+   events, drag & drop, filters, dialogs, data ops, mobile navigation.
+   Wrapped in an IIFE to avoid polluting the global scope.
+   ========================================================================= */
+(function () {
+
+  /* =====================================================================
+     SECTION A — Translations (centralized; no hard-coded visible strings)
+     ===================================================================== */
+  const I18N = {
+    en: {
+      addTask: "Add Task", menu: "Menu", language: "Language", theme: "Theme",
+      light: "Light", dark: "Dark", data: "Data", settings: "Settings",
+      close: "Close", cancel: "Cancel", save: "Save", edit: "Edit",
+      delete: "Delete", duplicate: "Duplicate", apply: "Apply",
+      clearSearch: "Clear search", searchPlaceholder: "Search tasks…",
+      board: "My Board",
+      total: "Total", dueToday: "Due Today", overdue: "Overdue",
+      inProgress: "In Progress", completed: "Completed", completion: "Completion",
+      filters: "Filters", filtersAndSort: "Filters & Sort", sort: "Sort",
+      clearFilters: "Clear Filters", priority: "Priority", labels: "Labels",
+      label: "Label", dueDate: "Due Date",
+      priorityAll: "All priorities", labelAll: "All labels",
+      due_all: "All", due_overdue: "Overdue", due_today: "Today",
+      due_upcoming: "Upcoming", due_none: "No Due Date", due_completed: "Completed",
+      prio_none: "No Priority", prio_low: "Low", prio_medium: "Medium",
+      prio_high: "High", prio_urgent: "Urgent",
+      sort_manual: "Manual Order", sort_priority: "Priority", sort_due: "Due Date",
+      sort_created: "Created Date", sort_updated: "Updated Date", sort_alpha: "Alphabetical",
+      addColumn: "Add Column", renameColumn: "Rename Column", newColumn: "New Column",
+      columnName: "Column Name", columnColor: "Column Color", column: "Column",
+      collapse: "Collapse", expand: "Expand", moveLeft: "Move Left", moveRight: "Move Right",
+      deleteColumn: "Delete Column", addTaskHere: "Add task", columnActions: "Column actions",
+      columnNameRequired: "Please enter a column name.", allTasks: "All Tasks", boardView: "Board",
+      prevColumn: "Previous column", nextColumn: "Next column",
+      newTask: "New Task", editTask: "Edit Task", title: "Title",
+      description: "Description", labelsHint: "Separate labels with commas.",
+      checklist: "Checklist", addChecklistItem: "Add item",
+      titleRequired: "Please enter a title.",
+      moveToColumn: "Move to column", movePrev: "Move to previous",
+      moveNext: "Move to next", complete: "Complete", reopen: "Reopen",
+      taskActions: "Task actions",
+      createdAt: "Created", updatedAt: "Updated", completedAt: "Completed on",
+      status: "Status", noLabels: "No labels", noChecklist: "No checklist items",
+      noDescription: "No description", none: "None", completedYes: "Completed", activeState: "Active",
+      exportBackup: "Export Backup", importBackup: "Import Backup",
+      resetBoard: "Reset Board", loadDemo: "Load Demo Data",
+      confirmTitle: "Please confirm",
+      confirmDeleteTask: "Delete this task? This cannot be undone.",
+      confirmDeleteColumnEmpty: "Delete this column?",
+      confirmDeleteColumnTasks: "This column has {n} task(s). Deleting it will remove them too. Continue?",
+      confirmReset: "Reset the board to its original state? All tasks and columns will be replaced.",
+      confirmReplace: "Importing will replace all current data. Continue?",
+      confirmLoadDemo: "Load demo data? This replaces your current tasks and columns.",
+      unsavedChanges: "You have unsaved changes. Discard them?",
+      confirmYes: "Confirm", discard: "Discard",
+      importSuccess: "Backup imported successfully.",
+      importError: "Invalid or corrupted backup file.",
+      exportSuccess: "Backup downloaded.",
+      resetDone: "Board reset.", demoLoaded: "Demo data loaded.",
+      taskSaved: "Task saved.", taskDeleted: "Task deleted.",
+      columnSaved: "Column saved.", columnDeleted: "Column deleted.",
+      taskDuplicated: "Task duplicated.", taskCompleted: "Task completed.",
+      taskReopened: "Task reopened.", taskMoved: "Task moved.",
+      emptyColumn: "No tasks here yet.", noTasksTitle: "No tasks yet",
+      noTasksSub: "Add your first task to get started.",
+      noResultsTitle: "No matching tasks", noResultsSub: "Try adjusting your search or filters.",
+      overdueBadge: "Overdue", checklistLabel: "Checklist",
+    },
+    fa: {
+      addTask: "افزودن وظیفه", menu: "منو", language: "زبان", theme: "پوسته",
+      light: "روشن", dark: "تیره", data: "داده‌ها", settings: "تنظیمات",
+      close: "بستن", cancel: "انصراف", save: "ذخیره", edit: "ویرایش",
+      delete: "حذف", duplicate: "کپی", apply: "اعمال",
+      clearSearch: "پاک‌کردن جست‌وجو", searchPlaceholder: "جست‌وجوی وظیفه‌ها…",
+      board: "برد من",
+      total: "کل", dueToday: "امروز", overdue: "عقب‌افتاده",
+      inProgress: "در حال انجام", completed: "انجام‌شده", completion: "پیشرفت",
+      filters: "فیلترها", filtersAndSort: "فیلتر و مرتب‌سازی", sort: "مرتب‌سازی",
+      clearFilters: "پاک‌کردن فیلترها", priority: "اولویت", labels: "برچسب‌ها",
+      label: "برچسب", dueDate: "سررسید",
+      priorityAll: "همهٔ اولویت‌ها", labelAll: "همهٔ برچسب‌ها",
+      due_all: "همه", due_overdue: "عقب‌افتاده", due_today: "امروز",
+      due_upcoming: "پیش‌رو", due_none: "بدون سررسید", due_completed: "انجام‌شده",
+      prio_none: "بدون اولویت", prio_low: "کم", prio_medium: "متوسط",
+      prio_high: "زیاد", prio_urgent: "فوری",
+      sort_manual: "ترتیب دستی", sort_priority: "اولویت", sort_due: "سررسید",
+      sort_created: "تاریخ ایجاد", sort_updated: "تاریخ به‌روزرسانی", sort_alpha: "الفبایی",
+      addColumn: "افزودن ستون", renameColumn: "تغییر نام ستون", newColumn: "ستون جدید",
+      columnName: "نام ستون", columnColor: "رنگ ستون", column: "ستون",
+      collapse: "جمع‌کردن", expand: "بازکردن", moveLeft: "انتقال به راست", moveRight: "انتقال به چپ",
+      deleteColumn: "حذف ستون", addTaskHere: "افزودن وظیفه", columnActions: "کنش‌های ستون",
+      columnNameRequired: "لطفاً نام ستون را وارد کنید.", allTasks: "همهٔ وظیفه‌ها", boardView: "برد",
+      prevColumn: "ستون قبلی", nextColumn: "ستون بعدی",
+      newTask: "وظیفهٔ جدید", editTask: "ویرایش وظیفه", title: "عنوان",
+      description: "توضیحات", labelsHint: "برچسب‌ها را با ویرگول جدا کنید.",
+      checklist: "چک‌لیست", addChecklistItem: "افزودن مورد",
+      titleRequired: "لطفاً یک عنوان وارد کنید.",
+      moveToColumn: "انتقال به ستون", movePrev: "انتقال به قبلی",
+      moveNext: "انتقال به بعدی", complete: "تکمیل", reopen: "بازگشایی",
+      taskActions: "کنش‌های وظیفه",
+      createdAt: "ایجاد", updatedAt: "به‌روزرسانی", completedAt: "تکمیل در",
+      status: "وضعیت", noLabels: "بدون برچسب", noChecklist: "بدون مورد چک‌لیست",
+      noDescription: "بدون توضیحات", none: "هیچ", completedYes: "انجام‌شده", activeState: "فعال",
+      exportBackup: "خروجی پشتیبان", importBackup: "ورودی پشتیبان",
+      resetBoard: "بازنشانی برد", loadDemo: "بارگذاری داده نمونه",
+      confirmTitle: "لطفاً تأیید کنید",
+      confirmDeleteTask: "این وظیفه حذف شود؟ این عمل بازگشت‌پذیر نیست.",
+      confirmDeleteColumnEmpty: "این ستون حذف شود؟",
+      confirmDeleteColumnTasks: "این ستون {n} وظیفه دارد. حذف آن وظیفه‌ها را هم پاک می‌کند. ادامه؟",
+      confirmReset: "برد به حالت اولیه بازنشانی شود؟ همهٔ وظیفه‌ها و ستون‌ها جایگزین می‌شوند.",
+      confirmReplace: "ورود داده همهٔ اطلاعات فعلی را جایگزین می‌کند. ادامه؟",
+      confirmLoadDemo: "داده نمونه بارگذاری شود؟ وظیفه‌ها و ستون‌های فعلی جایگزین می‌شوند.",
+      unsavedChanges: "تغییرات ذخیره‌نشده دارید. نادیده گرفته شوند؟",
+      confirmYes: "تأیید", discard: "نادیده‌گرفتن",
+      importSuccess: "پشتیبان با موفقیت وارد شد.",
+      importError: "فایل پشتیبان نامعتبر یا خراب است.",
+      exportSuccess: "پشتیبان دانلود شد.",
+      resetDone: "برد بازنشانی شد.", demoLoaded: "داده نمونه بارگذاری شد.",
+      taskSaved: "وظیفه ذخیره شد.", taskDeleted: "وظیفه حذف شد.",
+      columnSaved: "ستون ذخیره شد.", columnDeleted: "ستون حذف شد.",
+      taskDuplicated: "وظیفه کپی شد.", taskCompleted: "وظیفه تکمیل شد.",
+      taskReopened: "وظیفه بازگشایی شد.", taskMoved: "وظیفه منتقل شد.",
+      emptyColumn: "هنوز وظیفه‌ای اینجا نیست.", noTasksTitle: "هنوز وظیفه‌ای نیست",
+      noTasksSub: "برای شروع اولین وظیفه را اضافه کنید.",
+      noResultsTitle: "وظیفهٔ منطبقی نیست", noResultsSub: "جست‌وجو یا فیلترها را تغییر دهید.",
+      overdueBadge: "عقب‌افتاده", checklistLabel: "چک‌لیست",
+    }
+  };
+
+  // Default column titles per language, keyed by column key.
+  const COLUMN_DEFAULTS = {
+    inbox:      { en: "Inbox",       fa: "ورودی" },
+    todo:       { en: "To Do",       fa: "برای انجام" },
+    inprogress: { en: "In Progress", fa: "در حال انجام" },
+    waiting:    { en: "Waiting",     fa: "در انتظار" },
+    done:       { en: "Done",        fa: "انجام‌شده" },
+  };
+
+  const PRIORITIES = ["none", "low", "medium", "high", "urgent"];
+  const PRIO_RANK = { none: 0, low: 1, medium: 2, high: 3, urgent: 4 };
+  // color-independent glyphs so priority reads without relying on color
+  const PRIO_GLYPH = { none: "—", low: "↓", medium: "→", high: "↑", urgent: "‼" };
+
+  const SWATCH_COLORS = ["#5b5bd6", "#0ea5e9", "#14915b", "#d9820a", "#dc2f45", "#8b5cf6", "#ec4899", "#64748b"];
+  const DUE_FILTERS = ["all", "overdue", "today", "upcoming", "none", "completed"];
+  const SORTS = ["manual", "priority", "due", "created", "updated", "alpha"];
+
+  /* =====================================================================
+     SECTION B — Utilities
+     ===================================================================== */
+  function t(key) {
+    const lang = state.language || "en";
+    return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+  }
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function uid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+  }
+  function nowISO() { return new Date().toISOString(); }
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function parseDate(str) {
+    if (!str) return null;
+    const p = String(str).split("-");
+    if (p.length !== 3) return null;
+    const d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function startOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+  function isOverdue(task) {
+    if (task.completed || !task.dueDate) return false;
+    const due = parseDate(task.dueDate); return due ? due < startOfToday() : false;
+  }
+  function isDueToday(task) {
+    if (task.completed || !task.dueDate) return false;
+    const due = parseDate(task.dueDate); return due ? due.getTime() === startOfToday().getTime() : false;
+  }
+  function fmtDate(str) {
+    const d = parseDate(str); if (!d) return "";
+    const locale = state.language === "fa" ? "fa-IR" : "en-US";
+    try { return d.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" }); }
+    catch (e) { return str; }
+  }
+  function fmtDateTime(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso); if (isNaN(d.getTime())) return "—";
+    const locale = state.language === "fa" ? "fa-IR" : "en-US";
+    try { return d.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" }); }
+    catch (e) { return String(iso).slice(0, 10); }
+  }
+  function debounce(fn, ms) {
+    let h; return function () { const a = arguments, c = this; clearTimeout(h); h = setTimeout(function () { fn.apply(c, a); }, ms); };
+  }
+  const $ = function (sel, root) { return (root || document).querySelector(sel); };
+  const $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
+
+  /* =====================================================================
+     SECTION C — Storage (versioned, validated, corruption-safe)
+     ===================================================================== */
+  const STORAGE_KEY = "focusboard_data_v1";
+  const DATA_VERSION = 1;
+
+  function defaultColumns() {
+    const colors = { inbox: "#64748b", todo: "#5b5bd6", inprogress: "#0ea5e9", waiting: "#d9820a", done: "#14915b" };
+    return Object.keys(COLUMN_DEFAULTS).map(function (key, i) {
+      return { id: uid(), key: key, title: null, color: colors[key], collapsed: false, order: i };
+    });
+  }
+  function defaultFilters() {
+    return { search: "", priority: "all", label: "all", due: "all", sort: "manual" };
+  }
+  function defaultData() {
+    return {
+      version: DATA_VERSION,
+      language: (navigator.language || "en").toLowerCase().indexOf("fa") === 0 ? "fa" : "en",
+      theme: (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light",
+      columns: defaultColumns(),
+      tasks: [],
+      demoSeeded: false,
+      filters: defaultFilters(),
+    };
+  }
+
+  // Validate & coerce loaded data into a safe shape. Never throws.
+  function validateData(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const out = defaultData();
+    if (raw.language === "fa" || raw.language === "en") out.language = raw.language;
+    if (raw.theme === "dark" || raw.theme === "light") out.theme = raw.theme;
+    out.demoSeeded = !!raw.demoSeeded;
+
+    if (Array.isArray(raw.columns) && raw.columns.length) {
+      const seen = {};
+      out.columns = raw.columns.filter(function (c) { return c && typeof c === "object"; }).map(function (c, i) {
+        let id = typeof c.id === "string" && c.id && !seen[c.id] ? c.id : uid();
+        seen[id] = true;
+        return {
+          id: id,
+          key: typeof c.key === "string" && COLUMN_DEFAULTS[c.key] ? c.key : null,
+          title: typeof c.title === "string" ? c.title : null,
+          color: typeof c.color === "string" ? c.color : "#5b5bd6",
+          collapsed: !!c.collapsed,
+          order: typeof c.order === "number" ? c.order : i,
+        };
+      });
+      out.columns.sort(function (a, b) { return a.order - b.order; });
+      out.columns.forEach(function (c, i) { c.order = i; });
+    }
+    const colIds = {}; out.columns.forEach(function (c) { colIds[c.id] = true; });
+    const firstCol = out.columns[0] ? out.columns[0].id : null;
+
+    if (Array.isArray(raw.tasks)) {
+      const seenT = {};
+      out.tasks = raw.tasks.filter(function (x) { return x && typeof x === "object"; }).map(function (x) {
+        let id = typeof x.id === "string" && x.id && !seenT[x.id] ? x.id : uid();
+        seenT[id] = true;
+        let colId = colIds[x.columnId] ? x.columnId : firstCol;
+        let checklist = Array.isArray(x.checklist) ? x.checklist.filter(function (i) { return i && typeof i === "object"; }).map(function (i) {
+          return { id: typeof i.id === "string" ? i.id : uid(), text: String(i.text == null ? "" : i.text), done: !!i.done };
+        }) : [];
+        let labels = Array.isArray(x.labels) ? x.labels.map(function (l) { return String(l); }).filter(Boolean) : [];
+        return {
+          id: id,
+          title: String(x.title == null ? "" : x.title).slice(0, 500),
+          description: String(x.description == null ? "" : x.description).slice(0, 8000),
+          priority: PRIORITIES.indexOf(x.priority) >= 0 ? x.priority : "none",
+          dueDate: typeof x.dueDate === "string" && parseDate(x.dueDate) ? x.dueDate : "",
+          labels: labels,
+          checklist: checklist,
+          columnId: colId,
+          order: typeof x.order === "number" ? x.order : 0,
+          createdAt: typeof x.createdAt === "string" ? x.createdAt : nowISO(),
+          updatedAt: typeof x.updatedAt === "string" ? x.updatedAt : nowISO(),
+          completed: !!x.completed,
+          completedAt: typeof x.completedAt === "string" ? x.completedAt : null,
+        };
+      });
+    }
+    if (raw.filters && typeof raw.filters === "object") {
+      const f = defaultFilters();
+      if (typeof raw.filters.search === "string") f.search = raw.filters.search;
+      if (PRIORITIES.indexOf(raw.filters.priority) >= 0 || raw.filters.priority === "all") f.priority = raw.filters.priority;
+      if (typeof raw.filters.label === "string") f.label = raw.filters.label;
+      if (DUE_FILTERS.indexOf(raw.filters.due) >= 0) f.due = raw.filters.due;
+      if (SORTS.indexOf(raw.filters.sort) >= 0) f.sort = raw.filters.sort;
+      out.filters = f;
+    }
+    normalizeOrders(out);
+    return out;
+  }
+
+  // Migrate older-versioned data to the current version (extendable).
+  function migrate(raw) {
+    if (!raw || typeof raw !== "object") return raw;
+    if (!raw.version || raw.version < DATA_VERSION) raw.version = DATA_VERSION;
+    return raw;
+  }
+
+  function loadData() {
+    let raw;
+    try { raw = localStorage.getItem(STORAGE_KEY); }
+    catch (e) { return defaultData(); }
+    if (!raw) return null; // signal: first launch
+    let parsed;
+    try { parsed = JSON.parse(raw); }
+    catch (e) {
+      try { localStorage.setItem(STORAGE_KEY + "_corrupt_" + Date.now(), raw); } catch (e2) {}
+      return defaultData();
+    }
+    return validateData(migrate(parsed)) || defaultData();
+  }
+
+  const saveData = debounce(function () {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }, 120);
+  function saveNow() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {} }
+
+  // Keep per-column task order values contiguous.
+  function normalizeOrders(data) {
+    data.columns.forEach(function (col) {
+      data.tasks.filter(function (x) { return x.columnId === col.id; })
+        .sort(function (a, b) { return a.order - b.order; })
+        .forEach(function (x, i) { x.order = i; });
+    });
+  }
+
+  /* =====================================================================
+     SECTION D — State
+     ===================================================================== */
+  let state = defaultData();
+  const ui = {
+    editingTaskId: null, detailTaskId: null, editingColId: null,
+    colFormColor: SWATCH_COLORS[0], formChecklist: [], formDirty: false,
+    activeColIndex: 0, listView: false, lastFocus: null, openDialog: null, popContext: null,
+  };
+
+  /* =====================================================================
+     SECTION E — Derived data helpers
+     ===================================================================== */
+  function getColumn(id) { return state.columns.find(function (c) { return c.id === id; }); }
+  function getTask(id) { return state.tasks.find(function (x) { return x.id === id; }); }
+  function columnTitle(col) {
+    if (col.title) return col.title;
+    if (col.key && COLUMN_DEFAULTS[col.key]) return COLUMN_DEFAULTS[col.key][state.language];
+    return t("newColumn");
+  }
+  function sortedColumns() { return state.columns.slice().sort(function (a, b) { return a.order - b.order; }); }
+  function tasksInColumn(colId) {
+    return state.tasks.filter(function (x) { return x.columnId === colId; })
+      .sort(function (a, b) { return a.order - b.order; });
+  }
+  function allLabels() {
+    const set = {};
+    state.tasks.forEach(function (x) { x.labels.forEach(function (l) { set[l] = true; }); });
+    return Object.keys(set).sort();
+  }
+  function checklistProgress(task) {
+    const total = task.checklist.length;
+    const done = task.checklist.filter(function (i) { return i.done; }).length;
+    return { total: total, done: done, pct: total ? Math.round((done / total) * 100) : 0 };
+  }
+  function matchesFilters(task) {
+    const f = state.filters;
+    if (f.due === "overdue" && !isOverdue(task)) return false;
+    if (f.due === "today" && !isDueToday(task)) return false;
+    if (f.due === "upcoming") {
+      if (task.completed || !task.dueDate) return false;
+      const due = parseDate(task.dueDate);
+      if (!due || due <= startOfToday()) return false;
+    }
+    if (f.due === "none" && task.dueDate) return false;
+    if (f.due === "completed" && !task.completed) return false;
+    if (f.priority !== "all" && task.priority !== f.priority) return false;
+    if (f.label !== "all" && task.labels.indexOf(f.label) < 0) return false;
+    if (f.search) {
+      const q = f.search.toLowerCase();
+      const hay = [task.title, task.description, task.labels.join(" "),
+        task.checklist.map(function (i) { return i.text; }).join(" ")].join(" ").toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  }
+  // Sort a display list WITHOUT mutating stored manual order.
+  function sortForDisplay(list) {
+    const s = state.filters.sort;
+    if (s === "manual") return list;
+    const arr = list.slice();
+    if (s === "priority") arr.sort(function (a, b) { return PRIO_RANK[b.priority] - PRIO_RANK[a.priority] || a.order - b.order; });
+    else if (s === "due") arr.sort(function (a, b) {
+      const da = a.dueDate ? parseDate(a.dueDate).getTime() : Infinity;
+      const db = b.dueDate ? parseDate(b.dueDate).getTime() : Infinity;
+      return da - db || a.order - b.order;
+    });
+    else if (s === "created") arr.sort(function (a, b) { return new Date(a.createdAt) - new Date(b.createdAt); });
+    else if (s === "updated") arr.sort(function (a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); });
+    else if (s === "alpha") arr.sort(function (a, b) { return a.title.localeCompare(b.title, state.language === "fa" ? "fa" : "en"); });
+    return arr;
+  }
+  function activeFilterCount() {
+    const f = state.filters; let n = 0;
+    if (f.priority !== "all") n++;
+    if (f.label !== "all") n++;
+    if (f.due !== "all") n++;
+    if (f.sort !== "manual") n++;
+    return n;
+  }
+
+  /* =====================================================================
+     SECTION F — Rendering
+     ===================================================================== */
+  function applyStaticI18n() {
+    $$("[data-i18n]").forEach(function (el) { el.textContent = t(el.getAttribute("data-i18n")); });
+    $$("[data-i18n-aria]").forEach(function (el) { el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria"))); });
+    $("#searchInput").setAttribute("placeholder", t("searchPlaceholder"));
+    $("#searchInput").setAttribute("aria-label", t("searchPlaceholder"));
+    $("#brandBoard").textContent = t("board");
+  }
+  function renderChrome() {
+    document.documentElement.lang = state.language;
+    document.documentElement.dir = state.language === "fa" ? "rtl" : "ltr";
+    document.documentElement.setAttribute("data-theme", state.theme);
+    $$("#langSeg button").forEach(function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-lang") === state.language ? "true" : "false");
+    });
+    $("#btnTheme").innerHTML = state.theme === "dark"
+      ? '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>'
+      : '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+  }
+  function renderSummary() {
+    const tasks = state.tasks;
+    const total = tasks.length;
+    const dueToday = tasks.filter(isDueToday).length;
+    const overdue = tasks.filter(isOverdue).length;
+    const inProgress = tasks.filter(function (x) {
+      const c = getColumn(x.columnId); return !x.completed && c && c.key === "inprogress";
+    }).length;
+    const completed = tasks.filter(function (x) { return x.completed; }).length;
+    const pct = total ? Math.round((completed / total) * 100) : 0;
+    const cards = [
+      { k: "total", v: total, cls: "" },
+      { k: "dueToday", v: dueToday, cls: "warn" },
+      { k: "overdue", v: overdue, cls: "danger" },
+      { k: "inProgress", v: inProgress, cls: "accent" },
+      { k: "completed", v: completed, cls: "success" },
+    ];
+    let html = cards.map(function (c) {
+      return '<div class="stat ' + c.cls + '"><span class="stat-value">' + c.v + '</span><span class="stat-label">' + escapeHtml(t(c.k)) + "</span></div>";
+    }).join("");
+    html += '<div class="stat success"><span class="stat-value">' + pct + '%</span><span class="stat-label">' + escapeHtml(t("completion")) +
+      '</span><div class="stat-progress"><span style="width:' + pct + '%"></span></div></div>';
+    $("#summary").innerHTML = html;
+  }
+  function priorityPill(prio) {
+    if (prio === "none") return "";
+    return '<span class="pill prio-' + prio + '"><span class="pico" aria-hidden="true">' + PRIO_GLYPH[prio] + "</span>" + escapeHtml(t("prio_" + prio)) + "</span>";
+  }
+  function cardHTML(task) {
+    const overdue = isOverdue(task);
+    const dueToday = isDueToday(task);
+    const cp = checklistProgress(task);
+    const cls = ["card"];
+    if (task.completed) cls.push("completed");
+    if (overdue) cls.push("overdue");
+    let meta = priorityPill(task.priority);
+    if (task.dueDate) {
+      const dcls = overdue ? "due overdue" : (dueToday ? "due today" : "due");
+      const icon = '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>';
+      let label = fmtDate(task.dueDate);
+      if (overdue) label = t("overdueBadge") + " · " + label;
+      meta += '<span class="pill ' + dcls + '">' + icon + escapeHtml(label) + "</span>";
+    }
+    if (cp.total) {
+      meta += '<span class="pill checklist" title="' + escapeHtml(t("checklistLabel")) + '"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' +
+        cp.done + "/" + cp.total + '<span class="bar"><span style="width:' + cp.pct + '%"></span></span></span>';
+    }
+    let labels = "";
+    if (task.labels.length) {
+      labels = '<div class="labels">' + task.labels.map(function (l) { return '<span class="label-tag">' + escapeHtml(l) + "</span>"; }).join("") + "</div>";
+    }
+    const completeLabel = task.completed ? t("reopen") : t("complete");
+    return '<article class="' + cls.join(" ") + '" data-task="' + task.id + '" draggable="true" tabindex="0" role="button" aria-label="' + escapeHtml(task.title) + '">' +
+      '<div class="card-top">' +
+        '<span class="drag-handle" aria-hidden="true" data-noopen="1"><svg class="icon-sm" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span>' +
+        '<button class="card-check" data-act="toggle-complete" data-noopen="1" aria-label="' + escapeHtml(completeLabel) + '" aria-pressed="' + (task.completed ? "true" : "false") + '"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg></button>' +
+        '<span class="card-title">' + escapeHtml(task.title) + "</span>" +
+        '<button class="btn-icon card-kebab" data-act="menu" data-noopen="1" aria-haspopup="menu" aria-label="' + escapeHtml(t("taskActions")) + '"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>' +
+      "</div>" +
+      (meta ? '<div class="card-meta">' + meta + "</div>" : "") +
+      labels +
+      "</article>";
+  }
+  function columnHTML(col) {
+    const tasks = sortForDisplay(tasksInColumn(col.id).filter(matchesFilters));
+    const totalInCol = tasksInColumn(col.id).length;
+    const title = columnTitle(col);
+    const collapsed = col.collapsed;
+    let body;
+    if (collapsed) body = "";
+    else if (!tasks.length) body = '<div class="col-empty">' + escapeHtml(t("emptyColumn")) + "</div>";
+    else body = tasks.map(cardHTML).join("");
+    return '<section class="column' + (collapsed ? " collapsed" : "") + '" data-col="' + col.id + '" style="--col-color:' + escapeHtml(col.color) + '" aria-label="' + escapeHtml(title) + '">' +
+      '<div class="col-head">' +
+        '<button class="btn-icon" data-act="col-collapse" aria-label="' + escapeHtml(collapsed ? t("expand") : t("collapse")) + '" aria-expanded="' + (!collapsed) + '">' +
+          (collapsed
+            ? '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>'
+            : '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>') +
+        "</button>" +
+        '<span class="col-color-dot" aria-hidden="true"></span>' +
+        '<span class="col-title" title="' + escapeHtml(title) + '">' + escapeHtml(title) + "</span>" +
+        '<span class="col-count">' + totalInCol + "</span>" +
+        '<span style="flex:1"></span>' +
+        '<div class="col-head-actions">' +
+          '<button class="btn-icon" data-act="col-menu" aria-haspopup="menu" aria-label="' + escapeHtml(t("columnActions")) + '"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>' +
+        "</div>" +
+      "</div>" +
+      '<div class="col-body" data-col-body="' + col.id + '">' + body + "</div>" +
+      (collapsed ? "" : '<div class="col-quickadd"><button class="btn" data-act="col-add"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' + escapeHtml(t("addTaskHere")) + "</button></div>") +
+      "</section>";
+  }
+  function renderBoard() {
+    const board = $("#board");
+    const cols = sortedColumns();
+    if (ui.listView && isMobile()) {
+      board.classList.add("list-view");
+      renderListView(board, cols);
+      renderMobileNav(cols);
+      return;
+    }
+    board.classList.remove("list-view");
+    board.innerHTML = cols.length
+      ? cols.map(columnHTML).join("")
+      : '<div class="board-empty"><h3>' + escapeHtml(t("noTasksTitle")) + "</h3><p>" + escapeHtml(t("noTasksSub")) + "</p></div>";
+    renderMobileNav(cols);
+    if (isMobile()) scrollToColumn(ui.activeColIndex, false);
+  }
+  function renderListView(board, cols) {
+    let html = "", any = false;
+    cols.forEach(function (col) {
+      const list = sortForDisplay(tasksInColumn(col.id).filter(matchesFilters));
+      if (!list.length) return;
+      any = true;
+      html += '<div class="list-group-label"><span class="dot" style="background:' + escapeHtml(col.color) + '"></span>' +
+        escapeHtml(columnTitle(col)) + ' <span class="col-count">' + list.length + "</span></div>";
+      html += list.map(cardHTML).join("");
+    });
+    if (!any) {
+      html = '<div class="board-empty"><h3>' + escapeHtml(state.tasks.length ? t("noResultsTitle") : t("noTasksTitle")) +
+        "</h3><p>" + escapeHtml(state.tasks.length ? t("noResultsSub") : t("noTasksSub")) + "</p></div>";
+    }
+    board.innerHTML = html;
+  }
+  function renderMobileNav(cols) {
+    const chips = $("#mcolChips");
+    if (ui.activeColIndex >= cols.length) ui.activeColIndex = Math.max(0, cols.length - 1);
+    chips.innerHTML = cols.map(function (col, i) {
+      const cnt = tasksInColumn(col.id).filter(matchesFilters).length;
+      const cur = (!ui.listView && i === ui.activeColIndex);
+      return '<button class="mcol-chip" data-mcol="' + i + '" aria-current="' + (cur ? "true" : "false") + '">' +
+        '<span class="dot" style="background:' + escapeHtml(col.color) + '"></span>' +
+        escapeHtml(columnTitle(col)) + '<span class="cnt">' + cnt + "</span></button>";
+    }).join("");
+    const allBtn = $("#btnAllTasks");
+    allBtn.textContent = ui.listView ? t("boardView") : t("allTasks");
+    allBtn.setAttribute("aria-pressed", ui.listView ? "true" : "false");
+  }
+  function renderDesktopFilters() {
+    $("#desktopFilters").innerHTML =
+      selectControl("priority", "df-priority", priorityOptions(), state.filters.priority) +
+      selectControl("label", "df-label", labelOptions(), state.filters.label) +
+      selectControl("dueDate", "df-due", dueOptions(), state.filters.due) +
+      selectControl("sort", "df-sort", sortOptions(), state.filters.sort) +
+      '<button class="btn" id="df-clear" style="align-self:flex-end">' + escapeHtml(t("clearFilters")) + "</button>";
+  }
+  function selectControl(labelKey, id, optionsHtml, value) {
+    return '<label class="control-label">' + escapeHtml(t(labelKey)) +
+      '<select class="control" id="' + id + '" data-filter="' + id + '">' + markSelected(optionsHtml, value) + "</select></label>";
+  }
+  function markSelected(optionsHtml, value) {
+    return optionsHtml.replace('value="' + value + '"', 'value="' + value + '" selected');
+  }
+  function priorityOptions() {
+    return '<option value="all">' + escapeHtml(t("priorityAll")) + "</option>" +
+      PRIORITIES.map(function (p) { return '<option value="' + p + '">' + escapeHtml(t("prio_" + p)) + "</option>"; }).join("");
+  }
+  function labelOptions() {
+    return '<option value="all">' + escapeHtml(t("labelAll")) + "</option>" +
+      allLabels().map(function (l) { return '<option value="' + escapeHtml(l) + '">' + escapeHtml(l) + "</option>"; }).join("");
+  }
+  function dueOptions() { return DUE_FILTERS.map(function (d) { return '<option value="' + d + '">' + escapeHtml(t("due_" + d)) + "</option>"; }).join(""); }
+  function sortOptions() { return SORTS.map(function (s) { return '<option value="' + s + '">' + escapeHtml(t("sort_" + s)) + "</option>"; }).join(""); }
+  function renderActiveFilters() {
+    const f = state.filters; const chips = [];
+    if (f.priority !== "all") chips.push({ key: "priority", label: t("priority") + ": " + t("prio_" + f.priority) });
+    if (f.label !== "all") chips.push({ key: "label", label: t("label") + ": " + f.label });
+    if (f.due !== "all") chips.push({ key: "due", label: t("dueDate") + ": " + t("due_" + f.due) });
+    if (f.sort !== "manual") chips.push({ key: "sort", label: t("sort") + ": " + t("sort_" + f.sort) });
+    $("#activeFilters").innerHTML = chips.map(function (c) {
+      return '<span class="fchip">' + escapeHtml(c.label) +
+        '<button data-clearfilter="' + c.key + '" aria-label="' + escapeHtml(t("close")) + '"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>';
+    }).join("");
+    const n = activeFilterCount();
+    const badge = $("#filterCountBadge");
+    if (n) { badge.hidden = false; badge.textContent = n; } else { badge.hidden = true; }
+  }
+  function renderSearch() {
+    const inp = $("#searchInput");
+    if (inp.value !== state.filters.search) inp.value = state.filters.search;
+    $("#searchWrap").classList.toggle("has-value", !!state.filters.search);
+  }
+  function renderAll() {
+    renderChrome(); applyStaticI18n(); renderSummary(); renderSearch();
+    renderDesktopFilters(); renderActiveFilters(); renderBoard();
+  }
+  function renderData() {
+    renderSummary(); renderActiveFilters(); renderDesktopFilters(); renderBoard(); saveData();
+  }
+
+  /* =====================================================================
+     SECTION G — Task mutations
+     ===================================================================== */
+  function addTask(fields) {
+    const col = getColumn(fields.columnId) || sortedColumns()[0];
+    const task = {
+      id: uid(),
+      title: fields.title, description: fields.description || "",
+      priority: fields.priority || "none", dueDate: fields.dueDate || "",
+      labels: fields.labels || [], checklist: fields.checklist || [],
+      columnId: col.id, order: tasksInColumn(col.id).length,
+      createdAt: nowISO(), updatedAt: nowISO(), completed: false, completedAt: null,
+    };
+    state.tasks.push(task);
+    return task;
+  }
+  function updateTask(id, fields) {
+    const task = getTask(id); if (!task) return;
+    Object.assign(task, fields); task.updatedAt = nowISO();
+  }
+  function deleteTask(id) {
+    const task = getTask(id); if (!task) return;
+    const colId = task.columnId;
+    state.tasks = state.tasks.filter(function (x) { return x.id !== id; });
+    reindexColumn(colId);
+  }
+  function duplicateTask(id) {
+    const src = getTask(id); if (!src) return null;
+    const copy = JSON.parse(JSON.stringify(src));
+    copy.id = uid();
+    copy.checklist = copy.checklist.map(function (i) { return { id: uid(), text: i.text, done: i.done }; });
+    copy.createdAt = nowISO(); copy.updatedAt = nowISO();
+    copy.completed = false; copy.completedAt = null;
+    copy.order = src.order + 0.5; // slot right after source, then reindex
+    state.tasks.push(copy);
+    reindexColumn(src.columnId);
+    return copy;
+  }
+  function toggleComplete(id) {
+    const task = getTask(id); if (!task) return;
+    task.completed = !task.completed;
+    task.completedAt = task.completed ? nowISO() : null;
+    task.updatedAt = nowISO();
+    return task.completed;
+  }
+  function reindexColumn(colId) { tasksInColumn(colId).forEach(function (x, i) { x.order = i; }); }
+  function moveTaskToColumn(taskId, colId) {
+    const task = getTask(taskId); if (!task || task.columnId === colId) return;
+    const from = task.columnId;
+    task.columnId = colId;
+    task.order = tasksInColumn(colId).length + 1;
+    task.updatedAt = nowISO();
+    reindexColumn(from); reindexColumn(colId);
+  }
+  function moveTaskRelative(taskId, dir) {
+    const task = getTask(taskId); if (!task) return false;
+    const cols = sortedColumns();
+    const idx = cols.findIndex(function (c) { return c.id === task.columnId; });
+    const ni = idx + dir;
+    if (ni < 0 || ni >= cols.length) return false;
+    moveTaskToColumn(taskId, cols[ni].id);
+    return true;
+  }
+
+  /* =====================================================================
+     SECTION H — Column mutations
+     ===================================================================== */
+  function addColumn(name, color) {
+    const col = { id: uid(), key: null, title: name, color: color, collapsed: false, order: state.columns.length };
+    state.columns.push(col);
+    return col;
+  }
+  function updateColumn(id, fields) { const col = getColumn(id); if (col) Object.assign(col, fields); }
+  function deleteColumn(id) {
+    state.tasks = state.tasks.filter(function (x) { return x.columnId !== id; });
+    state.columns = state.columns.filter(function (c) { return c.id !== id; });
+    sortedColumns().forEach(function (c, i) { c.order = i; });
+  }
+  function moveColumn(id, dir) {
+    const cols = sortedColumns();
+    const idx = cols.findIndex(function (c) { return c.id === id; });
+    const ni = idx + dir;
+    if (ni < 0 || ni >= cols.length) return;
+    const tmp = cols[idx].order; cols[idx].order = cols[ni].order; cols[ni].order = tmp;
+  }
+
+  /* =====================================================================
+     SECTION I — Dialog / focus management
+     ===================================================================== */
+  function focusables(el) {
+    return $$('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])', el)
+      .filter(function (n) { return n.offsetWidth > 0 || n.offsetHeight > 0 || n === document.activeElement; });
+  }
+  function openOverlay(id) {
+    ui.lastFocus = document.activeElement;
+    const el = $("#" + id);
+    el.classList.add("open");
+    ui.openDialog = id;
+    setTimeout(function () { const f = focusables(el)[0]; if (f) f.focus(); }, 20);
+    document.addEventListener("keydown", trapKeydown, true);
+  }
+  function closeOverlay(id) {
+    const el = $("#" + id); if (el) el.classList.remove("open");
+    if (ui.openDialog === id) ui.openDialog = null;
+    document.removeEventListener("keydown", trapKeydown, true);
+    if (ui.lastFocus && ui.lastFocus.focus) { try { ui.lastFocus.focus(); } catch (e) {} }
+  }
+  function trapKeydown(e) {
+    if (!ui.openDialog) return;
+    if (e.key === "Escape") { e.preventDefault(); handleEscape(); return; }
+    if (e.key !== "Tab") return;
+    const el = $("#" + ui.openDialog); if (!el) return;
+    const f = focusables(el); if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+  function handleEscape() {
+    const id = ui.openDialog;
+    if (id === "taskOverlay") { attemptCloseTaskForm(); return; }
+    if (id === "confirmOverlay") { resolveConfirm(false); return; }
+    if (id === "filterSheet" || id === "mobileMenu") { closeSheet(id); return; }
+    closeOverlay(id);
+  }
+
+  /* =====================================================================
+     SECTION J — Task form dialog
+     ===================================================================== */
+  function buildPriorityPicker() {
+    $("#f-prio").innerHTML = PRIORITIES.map(function (p) {
+      return '<label class="prio-opt"><input type="radio" name="prio" value="' + p + '">' +
+        '<span aria-hidden="true">' + PRIO_GLYPH[p] + "</span>" + escapeHtml(t("prio_" + p)) + "</label>";
+    }).join("");
+  }
+  function buildColumnSelect() {
+    $("#f-col").innerHTML = sortedColumns().map(function (c) {
+      return '<option value="' + c.id + '">' + escapeHtml(columnTitle(c)) + "</option>";
+    }).join("");
+  }
+  function renderFormChecklist() {
+    $("#f-checklist").innerHTML = ui.formChecklist.map(function (item, i) {
+      return '<div class="chk-item' + (item.done ? " done" : "") + '" data-chk="' + i + '">' +
+        '<input type="checkbox" ' + (item.done ? "checked" : "") + ' data-chk-done aria-label="' + escapeHtml(t("complete")) + '">' +
+        '<input class="input" data-chk-text value="' + escapeHtml(item.text) + '" placeholder="' + escapeHtml(t("checklist")) + '">' +
+        '<button type="button" class="btn-icon" data-chk-del aria-label="' + escapeHtml(t("delete")) + '"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+        "</div>";
+    }).join("");
+  }
+  function openTaskForm(taskId, presetColId) {
+    ui.editingTaskId = taskId || null;
+    ui.formDirty = false;
+    buildPriorityPicker(); buildColumnSelect();
+    const form = $("#taskForm"); form.reset();
+    clearFieldError("f-title-wrap");
+    $("#taskFormTitle").textContent = taskId ? t("editTask") : t("newTask");
+    $("#btnDeleteFromForm").style.display = taskId ? "" : "none";
+    let prio = "none";
+    if (taskId) {
+      const task = getTask(taskId);
+      $("#f-title").value = task.title;
+      $("#f-desc").value = task.description;
+      $("#f-due").value = task.dueDate || "";
+      $("#f-labels").value = task.labels.join(", ");
+      $("#f-col").value = task.columnId;
+      prio = task.priority;
+      ui.formChecklist = task.checklist.map(function (i) { return { id: i.id, text: i.text, done: i.done }; });
+    } else {
+      ui.formChecklist = [];
+      if (presetColId) $("#f-col").value = presetColId;
+    }
+    const rb = $('#f-prio input[value="' + prio + '"]'); if (rb) rb.checked = true;
+    renderFormChecklist();
+    openOverlay("taskOverlay");
+  }
+  function collectTaskForm() {
+    const labels = $("#f-labels").value.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+    const seen = {}; const uniq = [];
+    labels.forEach(function (l) { const k = l.toLowerCase(); if (!seen[k]) { seen[k] = 1; uniq.push(l); } });
+    const checklist = ui.formChecklist
+      .map(function (i) { return { id: i.id || uid(), text: i.text.trim(), done: i.done }; })
+      .filter(function (i) { return i.text; });
+    return {
+      title: $("#f-title").value.trim(),
+      description: $("#f-desc").value.trim(),
+      priority: (document.querySelector("#f-prio input:checked") || {}).value || "none",
+      dueDate: $("#f-due").value || "",
+      labels: uniq, checklist: checklist, columnId: $("#f-col").value,
+    };
+  }
+  function saveTaskForm() {
+    const fields = collectTaskForm();
+    if (!fields.title) { showFieldError("f-title-wrap"); $("#f-title").focus(); return; }
+    if (ui.editingTaskId) {
+      updateTask(ui.editingTaskId, fields);
+    } else {
+      const task = addTask(fields);
+      const idx = sortedColumns().findIndex(function (c) { return c.id === task.columnId; });
+      if (idx >= 0) ui.activeColIndex = idx;
+    }
+    ui.formDirty = false;
+    closeOverlay("taskOverlay");
+    renderData();
+    toast(t("taskSaved"), "ok");
+  }
+  function attemptCloseTaskForm() {
+    if (ui.formDirty) {
+      confirmDialog(t("unsavedChanges"), t("discard")).then(function (ok) {
+        if (ok) { ui.formDirty = false; closeOverlay("taskOverlay"); }
+      });
+    } else closeOverlay("taskOverlay");
+  }
+  function showFieldError(wrapId) { $("#" + wrapId).classList.add("invalid"); }
+  function clearFieldError(wrapId) { $("#" + wrapId).classList.remove("invalid"); }
+
+  /* =====================================================================
+     SECTION K — Task detail dialog
+     ===================================================================== */
+  function openDetail(taskId) {
+    const task = getTask(taskId); if (!task) return;
+    ui.detailTaskId = taskId;
+    $("#detailTitle").textContent = task.title;
+    const col = getColumn(task.columnId);
+    const cp = checklistProgress(task);
+    function row(key, valHtml) {
+      return '<div class="detail-row"><div class="detail-key">' + escapeHtml(key) + '</div><div class="detail-val">' + valHtml + "</div></div>";
+    }
+    let html = "";
+    html += row(t("status"), task.completed
+      ? '<span class="pill" style="color:var(--success);background:var(--success-soft);border-color:transparent">' + escapeHtml(t("completedYes")) + "</span>"
+      : escapeHtml(t("activeState")));
+    html += row(t("column"), '<span class="pill" style="color:' + escapeHtml(col ? col.color : "") + '">' + escapeHtml(col ? columnTitle(col) : "—") + "</span>");
+    html += row(t("priority"), task.priority === "none" ? escapeHtml(t("prio_none")) :
+      '<span class="pill prio-' + task.priority + '"><span class="pico" aria-hidden="true">' + PRIO_GLYPH[task.priority] + "</span>" + escapeHtml(t("prio_" + task.priority)) + "</span>");
+    html += row(t("dueDate"), task.dueDate
+      ? escapeHtml(fmtDate(task.dueDate)) + (isOverdue(task) ? ' <span class="pill due overdue">' + escapeHtml(t("overdueBadge")) + "</span>" : "")
+      : escapeHtml(t("none")));
+    html += row(t("labels"), task.labels.length
+      ? '<div class="labels">' + task.labels.map(function (l) { return '<span class="label-tag">' + escapeHtml(l) + "</span>"; }).join("") + "</div>"
+      : escapeHtml(t("noLabels")));
+    html += row(t("description"), task.description
+      ? '<div class="detail-desc">' + escapeHtml(task.description) + "</div>"
+      : escapeHtml(t("noDescription")));
+    if (task.checklist.length) {
+      html += row(t("checklist") + " (" + cp.done + "/" + cp.total + ")",
+        '<ul class="detail-checklist">' + task.checklist.map(function (i) {
+          return '<li class="' + (i.done ? "done" : "") + '"><input type="checkbox" ' + (i.done ? "checked" : "") + ' data-detail-chk="' + i.id + '">' + escapeHtml(i.text) + "</li>";
+        }).join("") + "</ul>");
+    } else {
+      html += row(t("checklist"), escapeHtml(t("noChecklist")));
+    }
+    html += row(t("createdAt"), escapeHtml(fmtDateTime(task.createdAt)));
+    html += row(t("updatedAt"), escapeHtml(fmtDateTime(task.updatedAt)));
+    if (task.completedAt) html += row(t("completedAt"), escapeHtml(fmtDateTime(task.completedAt)));
+    $("#detailBody").innerHTML = html;
+    openOverlay("detailOverlay");
+  }
+
+  /* =====================================================================
+     SECTION L — Column dialog
+     ===================================================================== */
+  function openColForm(colId) {
+    ui.editingColId = colId || null;
+    $("#colTitle").textContent = colId ? t("renameColumn") : t("addColumn");
+    clearFieldError("c-name-wrap");
+    const col = colId ? getColumn(colId) : null;
+    $("#c-name").value = col ? columnTitle(col) : "";
+    ui.colFormColor = col ? col.color : SWATCH_COLORS[0];
+    renderSwatches();
+    openOverlay("colOverlay");
+  }
+  function renderSwatches() {
+    $("#c-swatches").innerHTML = SWATCH_COLORS.map(function (c) {
+      return '<button type="button" class="swatch" data-swatch="' + c + '" style="background:' + c + '" aria-pressed="' + (c === ui.colFormColor ? "true" : "false") + '" aria-label="' + c + '"></button>';
+    }).join("");
+  }
+  function saveColForm() {
+    const name = $("#c-name").value.trim();
+    if (!name) { showFieldError("c-name-wrap"); $("#c-name").focus(); return; }
+    if (ui.editingColId) updateColumn(ui.editingColId, { title: name, color: ui.colFormColor, key: null });
+    else {
+      const col = addColumn(name, ui.colFormColor);
+      ui.activeColIndex = sortedColumns().findIndex(function (c) { return c.id === col.id; });
+    }
+    closeOverlay("colOverlay");
+    renderData();
+    toast(t("columnSaved"), "ok");
+  }
+
+  /* =====================================================================
+     SECTION M — Confirm dialog (promise-based)
+     ===================================================================== */
+  let confirmResolver = null;
+  function confirmDialog(message, okLabel) {
+    $("#confirmTitle").textContent = t("confirmTitle");
+    $("#confirmMsg").textContent = message;
+    $("#confirmOk").textContent = okLabel || t("confirmYes");
+    openOverlay("confirmOverlay");
+    return new Promise(function (resolve) { confirmResolver = resolve; });
+  }
+  function resolveConfirm(val) {
+    closeOverlay("confirmOverlay");
+    if (confirmResolver) { const r = confirmResolver; confirmResolver = null; r(val); }
+  }
+
+  /* =====================================================================
+     SECTION N — Popover menu (task & column actions)
+     ===================================================================== */
+  function openPopMenu(anchor, items) {
+    const menu = $("#popMenu");
+    menu.innerHTML = items.map(function (it) {
+      if (it.sep) return '<div class="menu-sep"></div>';
+      if (it.label) return '<div class="menu-label">' + escapeHtml(it.label) + "</div>";
+      return '<button role="menuitem" data-menuact="' + it.act + '"' + (it.value != null ? ' data-value="' + escapeHtml(it.value) + '"' : "") +
+        (it.disabled ? " disabled" : "") + (it.danger ? ' class="danger"' : "") + "><span>" + escapeHtml(it.text) + "</span></button>";
+    }).join("");
+    menu.classList.add("open");
+    positionMenu(menu, anchor);
+    setTimeout(function () { const b = menu.querySelector("button:not([disabled])"); if (b) b.focus(); }, 10);
+  }
+  function positionMenu(menu, anchor) {
+    const r = anchor.getBoundingClientRect();
+    menu.style.visibility = "hidden";
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    let top = r.bottom + 4;
+    if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 4);
+    let left = document.documentElement.dir === "rtl" ? r.right - mw : r.left;
+    left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
+    menu.style.top = top + "px"; menu.style.left = left + "px";
+    menu.style.visibility = "";
+  }
+  function closePopMenu() { const m = $("#popMenu"); m.classList.remove("open"); m.innerHTML = ""; }
+  function taskMenuItems(task) {
+    const cols = sortedColumns();
+    const idx = cols.findIndex(function (c) { return c.id === task.columnId; });
+    const items = [
+      { act: "edit", text: t("edit") },
+      { act: "complete", text: task.completed ? t("reopen") : t("complete") },
+      { act: "duplicate", text: t("duplicate") },
+      { sep: true },
+      { act: "move-prev", text: t("movePrev"), disabled: idx <= 0 },
+      { act: "move-next", text: t("moveNext"), disabled: idx >= cols.length - 1 },
+      { label: t("moveToColumn") },
+    ];
+    cols.forEach(function (c, i) { if (i !== idx) items.push({ act: "move-col", value: c.id, text: columnTitle(c) }); });
+    items.push({ sep: true }, { act: "delete", text: t("delete"), danger: true });
+    return items;
+  }
+  function columnMenuItems(col) {
+    const cols = sortedColumns();
+    const idx = cols.findIndex(function (c) { return c.id === col.id; });
+    return [
+      { act: "col-add-task", text: t("addTaskHere") },
+      { act: "col-rename", text: t("renameColumn") },
+      { act: "col-collapse", text: col.collapsed ? t("expand") : t("collapse") },
+      { sep: true },
+      { act: "col-left", text: t("moveLeft"), disabled: idx === 0 },
+      { act: "col-right", text: t("moveRight"), disabled: idx === cols.length - 1 },
+      { sep: true },
+      { act: "col-delete", text: t("deleteColumn"), danger: true },
+    ];
+  }
+
+  /* =====================================================================
+     SECTION O — Data menu / mobile menu content
+     ===================================================================== */
+  const iconExport = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>';
+  const iconImport = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>';
+  const iconReset = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>';
+  const iconDemo = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 16.5 7.1 18l.9-5.5-4-3.9L9.5 8z"/></svg>';
+
+  function dataMenuItems() {
+    return [
+      { act: "export", text: t("exportBackup"), icon: iconExport },
+      { act: "import", text: t("importBackup"), icon: iconImport },
+      { sep: true },
+      { act: "demo", text: t("loadDemo"), icon: iconDemo },
+      { act: "reset", text: t("resetBoard"), icon: iconReset, danger: true },
+    ];
+  }
+  function openDataMenu(anchor) {
+    const menu = $("#dataMenu");
+    menu.innerHTML = dataMenuItems().map(function (it) {
+      if (it.sep) return '<div class="menu-sep"></div>';
+      return '<button role="menuitem" data-dataact="' + it.act + '"' + (it.danger ? ' class="danger"' : "") + ">" + it.icon + "<span>" + escapeHtml(it.text) + "</span></button>";
+    }).join("");
+    menu.classList.add("open");
+    positionMenu(menu, anchor);
+    setTimeout(function () { const b = menu.querySelector("button"); if (b) b.focus(); }, 10);
+  }
+  function closeDataMenu() { $("#dataMenu").classList.remove("open"); }
+  function renderMobileMenu() {
+    $("#mobileMenuBody").innerHTML =
+      '<div class="menu-section"><div class="menu-label">' + escapeHtml(t("language")) + "</div>" +
+        '<div class="seg" role="group" style="width:100%">' +
+          '<button style="flex:1" data-mm-lang="en" aria-pressed="' + (state.language === "en") + '">EN</button>' +
+          '<button style="flex:1" data-mm-lang="fa" aria-pressed="' + (state.language === "fa") + '">فارسی</button>' +
+        "</div></div>" +
+      '<div class="menu-section"><div class="menu-label">' + escapeHtml(t("theme")) + "</div>" +
+        '<div class="seg" role="group" style="width:100%">' +
+          '<button style="flex:1" data-mm-theme="light" aria-pressed="' + (state.theme === "light") + '">' + escapeHtml(t("light")) + "</button>" +
+          '<button style="flex:1" data-mm-theme="dark" aria-pressed="' + (state.theme === "dark") + '">' + escapeHtml(t("dark")) + "</button>" +
+        "</div></div>" +
+      '<div class="menu-section"><div class="menu-label">' + escapeHtml(t("data")) + "</div>" +
+        '<button class="btn btn-block" data-mm="export" style="justify-content:flex-start;margin-bottom:6px">' + iconExport + "<span>" + escapeHtml(t("exportBackup")) + "</span></button>" +
+        '<button class="btn btn-block" data-mm="import" style="justify-content:flex-start;margin-bottom:6px">' + iconImport + "<span>" + escapeHtml(t("importBackup")) + "</span></button>" +
+        '<button class="btn btn-block" data-mm="demo" style="justify-content:flex-start;margin-bottom:6px">' + iconDemo + "<span>" + escapeHtml(t("loadDemo")) + "</span></button>" +
+        '<button class="btn btn-block btn-danger" data-mm="reset" style="justify-content:flex-start">' + iconReset + "<span>" + escapeHtml(t("resetBoard")) + "</span></button>" +
+      "</div>";
+  }
+
+  /* =====================================================================
+     SECTION P — Filter bottom sheet (mobile)
+     ===================================================================== */
+  function renderFilterSheet() {
+    function group(labelKey, id, optsHtml, value) {
+      return '<div class="field"><label for="' + id + '">' + escapeHtml(t(labelKey)) + "</label>" +
+        '<select class="select" id="' + id + '">' + markSelected(optsHtml, value) + "</select></div>";
+    }
+    $("#filterSheetBody").innerHTML =
+      group("priority", "fs-priority", priorityOptions(), state.filters.priority) +
+      group("label", "fs-label", labelOptions(), state.filters.label) +
+      group("dueDate", "fs-due", dueOptions(), state.filters.due) +
+      group("sort", "fs-sort", sortOptions(), state.filters.sort);
+  }
+
+  /* =====================================================================
+     SECTION Q — Filters application
+     ===================================================================== */
+  function setFilter(key, value) { state.filters[key] = value; renderData(); renderSearch(); }
+  function clearAllFilters() {
+    state.filters = defaultFilters();
+    $("#searchInput").value = "";
+    renderData(); renderSearch();
+  }
+
+  /* =====================================================================
+     SECTION R — Toast
+     ===================================================================== */
+  function toast(msg, kind) {
+    const el = document.createElement("div");
+    el.className = "toast" + (kind ? " " + kind : "");
+    el.textContent = msg;
+    $("#toastWrap").appendChild(el);
+    setTimeout(function () { el.style.opacity = "0"; el.style.transition = "opacity .3s"; }, 2200);
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 2600);
+  }
+
+  /* =====================================================================
+     SECTION S — Import / Export / Reset / Demo
+     ===================================================================== */
+  function exportBackup() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "focusboard-backup-" + todayStr() + ".json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    toast(t("exportSuccess"), "ok");
+  }
+  function handleImportFile(file) {
+    const reader = new FileReader();
+    reader.onload = function () {
+      let parsed;
+      try { parsed = JSON.parse(reader.result); }
+      catch (e) { toast(t("importError"), "err"); return; }
+      const valid = validateData(migrate(parsed));
+      if (!valid || !Array.isArray(valid.columns) || !valid.columns.length) { toast(t("importError"), "err"); return; }
+      confirmDialog(t("confirmReplace"), t("confirmYes")).then(function (ok) {
+        if (!ok) return;
+        state = valid; ui.activeColIndex = 0; ui.listView = false;
+        saveNow(); renderAll(); toast(t("importSuccess"), "ok");
+      });
+    };
+    reader.onerror = function () { toast(t("importError"), "err"); };
+    reader.readAsText(file);
+  }
+  function resetBoard() {
+    confirmDialog(t("confirmReset"), t("confirmYes")).then(function (ok) {
+      if (!ok) return;
+      const lang = state.language, theme = state.theme;
+      state = defaultData();
+      state.language = lang; state.theme = theme; state.demoSeeded = true;
+      ui.activeColIndex = 0; ui.listView = false;
+      saveNow(); renderAll(); toast(t("resetDone"), "ok");
+    });
+  }
+  function loadDemo(needConfirm) {
+    function apply() {
+      const lang = state.language, theme = state.theme;
+      state = defaultData();
+      state.language = lang; state.theme = theme; state.demoSeeded = true;
+      seedDemoTasks();
+      ui.activeColIndex = 0; ui.listView = false;
+      saveNow(); renderAll(); toast(t("demoLoaded"), "ok");
+    }
+    if (needConfirm) confirmDialog(t("confirmLoadDemo"), t("confirmYes")).then(function (ok) { if (ok) apply(); });
+    else apply();
+  }
+  function seedDemoTasks() {
+    const byKey = {};
+    state.columns.forEach(function (c) { if (c.key) byKey[c.key] = c.id; });
+    const today = new Date();
+    function offset(days) {
+      const d = new Date(today); d.setDate(d.getDate() + days);
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+    const demo = [
+      { col: "inbox", title: "Read saved design articles", prio: "low", labels: ["reading"], desc: "Catch up on saved UX articles." },
+      { col: "todo", title: "Plan weekly goals", prio: "medium", due: offset(1), labels: ["planning"], chk: ["Review last week", "Set 3 priorities"] },
+      { col: "todo", title: "Book dentist appointment", prio: "high", due: offset(-1), labels: ["health"] },
+      { col: "inprogress", title: "Write project proposal", prio: "urgent", due: offset(2), labels: ["work"], desc: "Draft scope, timeline, and budget.", chk: ["Outline", "First draft", "Review"], chkDone: 1 },
+      { col: "waiting", title: "Waiting on client feedback", prio: "medium", labels: ["work"] },
+      { col: "done", title: "Set up FocusBoard", prio: "none", labels: ["setup"], done: true },
+    ];
+    demo.forEach(function (d) {
+      const colId = byKey[d.col] || state.columns[0].id;
+      state.tasks.push({
+        id: uid(), title: d.title, description: d.desc || "",
+        priority: d.prio, dueDate: d.due || "", labels: d.labels || [],
+        checklist: (d.chk || []).map(function (txt, i) { return { id: uid(), text: txt, done: d.done ? true : i < (d.chkDone || 0) }; }),
+        columnId: colId, order: tasksInColumn(colId).length,
+        createdAt: nowISO(), updatedAt: nowISO(),
+        completed: !!d.done, completedAt: d.done ? nowISO() : null,
+      });
+    });
+  }
+
+  /* =====================================================================
+     SECTION T — Drag & drop (desktop, native HTML5)
+     ===================================================================== */
+  let dragState = null;
+  function onDragStart(e) {
+    const card = e.target.closest(".card"); if (!card) return;
+    dragState = { id: card.getAttribute("data-task") };
+    card.classList.add("dragging");
+    e.dataTransfer.effectAllowed = "move";
+    try { e.dataTransfer.setData("text/plain", dragState.id); } catch (err) {}
+  }
+  function onDragEnd(e) {
+    const card = e.target.closest(".card"); if (card) card.classList.remove("dragging");
+    $$(".column.drop-target").forEach(function (c) { c.classList.remove("drop-target"); });
+    dragState = null;
+  }
+  function onDragOver(e) {
+    if (!dragState) return;
+    const col = e.target.closest(".column");
+    if (!col || col.classList.contains("collapsed")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    $$(".column.drop-target").forEach(function (c) { if (c !== col) c.classList.remove("drop-target"); });
+    col.classList.add("drop-target");
+  }
+  function onDrop(e) {
+    if (!dragState) return;
+    const col = e.target.closest(".column"); if (!col) return;
+    e.preventDefault();
+    const colId = col.getAttribute("data-col");
+    const body = col.querySelector(".col-body");
+    const beforeId = body ? getDropTargetId(body, e.clientY) : null;
+    performDrop(dragState.id, colId, beforeId);
+    col.classList.remove("drop-target");
+    dragState = null;
+  }
+  function getDropTargetId(container, y) {
+    const cards = $$(".card:not(.dragging)", container);
+    for (let i = 0; i < cards.length; i++) {
+      const r = cards[i].getBoundingClientRect();
+      if (y < r.top + r.height / 2) return cards[i].getAttribute("data-task");
+    }
+    return null;
+  }
+  function performDrop(taskId, colId, beforeId) {
+    const task = getTask(taskId); if (!task) return;
+    const fromCol = task.columnId;
+    let list = tasksInColumn(colId).filter(function (x) { return x.id !== taskId; });
+    let insertIdx = beforeId ? list.findIndex(function (x) { return x.id === beforeId; }) : list.length;
+    if (insertIdx < 0) insertIdx = list.length;
+    task.columnId = colId; task.updatedAt = nowISO();
+    list.splice(insertIdx, 0, task);
+    list.forEach(function (x, i) { x.order = i; });
+    if (fromCol !== colId) reindexColumn(fromCol);
+    renderData();
+  }
+
+  /* =====================================================================
+     SECTION U — Mobile helpers
+     ===================================================================== */
+  function isMobile() { return window.matchMedia("(max-width: 768px)").matches; }
+  function scrollToColumn(index, smooth) {
+    if (!isMobile() || ui.listView) return;
+    const board = $("#board");
+    const cols = $$(".column", board);
+    if (!cols[index]) return;
+    board.scrollTo({ left: cols[index].offsetLeft - board.offsetLeft, behavior: smooth === false ? "auto" : "smooth" });
+  }
+  function updateActiveColFromScroll() {
+    if (!isMobile() || ui.listView) return;
+    const board = $("#board");
+    const cols = $$(".column", board);
+    if (!cols.length) return;
+    const center = board.scrollLeft + board.clientWidth / 2;
+    let best = 0, bestDist = Infinity;
+    cols.forEach(function (c, i) {
+      const mid = c.offsetLeft - board.offsetLeft + c.clientWidth / 2;
+      const d = Math.abs(mid - center);
+      if (d < bestDist) { bestDist = d; best = i; }
+    });
+    if (best !== ui.activeColIndex) {
+      ui.activeColIndex = best;
+      $$("#mcolChips .mcol-chip").forEach(function (chip, i) { chip.setAttribute("aria-current", i === best ? "true" : "false"); });
+      const active = $('#mcolChips .mcol-chip[data-mcol="' + best + '"]');
+      if (active && active.scrollIntoView) active.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    }
+  }
+  function goColumn(delta) {
+    const cols = sortedColumns();
+    ui.activeColIndex = Math.max(0, Math.min(cols.length - 1, ui.activeColIndex + delta));
+    scrollToColumn(ui.activeColIndex, true);
+    renderMobileNav(cols);
+  }
+  function currentColId() {
+    const cols = sortedColumns();
+    return cols[ui.activeColIndex] ? cols[ui.activeColIndex].id : (cols[0] ? cols[0].id : null);
+  }
+
+  /* =====================================================================
+     SECTION V — Sheets (mobile drawers / bottom sheets)
+     ===================================================================== */
+  function openSheet(id) {
+    ui.lastFocus = document.activeElement;
+    const el = $("#" + id); el.classList.add("open"); ui.openDialog = id;
+    setTimeout(function () { const f = focusables(el)[0]; if (f) f.focus(); }, 20);
+    document.addEventListener("keydown", trapKeydown, true);
+  }
+  function closeSheet(id) {
+    const el = $("#" + id); if (el) el.classList.remove("open");
+    if (ui.openDialog === id) ui.openDialog = null;
+    document.removeEventListener("keydown", trapKeydown, true);
+    if (ui.lastFocus && ui.lastFocus.focus) { try { ui.lastFocus.focus(); } catch (e) {} }
+  }
+
+  /* =====================================================================
+     SECTION W — Language & theme
+     ===================================================================== */
+  function setLanguage(lang) {
+    if (lang !== "en" && lang !== "fa") return;
+    state.language = lang; saveData(); renderAll();
+  }
+  function setTheme(theme) {
+    state.theme = theme === "dark" ? "dark" : "light"; saveData(); renderChrome();
+  }
+
+  /* =====================================================================
+     SECTION X — Event wiring
+     ===================================================================== */
+  function wireEvents() {
+    // Header
+    $("#btnAddTask").addEventListener("click", function () { openTaskForm(null, currentColId()); });
+    $("#btnAddTaskMobile").addEventListener("click", function () { openTaskForm(null, currentColId()); });
+    $("#fab").addEventListener("click", function () { openTaskForm(null, currentColId()); });
+    $("#btnTheme").addEventListener("click", function () { setTheme(state.theme === "dark" ? "light" : "dark"); });
+    $("#langSeg").addEventListener("click", function (e) {
+      const b = e.target.closest("button[data-lang]"); if (b) setLanguage(b.getAttribute("data-lang"));
+    });
+    $("#btnData").addEventListener("click", function (e) { e.stopPropagation(); toggleDataMenu(this); });
+    $("#btnMobileMenuOpen").addEventListener("click", function () { renderMobileMenu(); openSheet("mobileMenu"); });
+
+    // Search
+    const onSearch = debounce(function (val) { state.filters.search = val; renderData(); }, 180);
+    $("#searchInput").addEventListener("input", function () {
+      $("#searchWrap").classList.toggle("has-value", !!this.value);
+      onSearch(this.value);
+    });
+    $("#searchClear").addEventListener("click", function () {
+      $("#searchInput").value = ""; state.filters.search = ""; renderSearch(); renderData(); $("#searchInput").focus();
+    });
+
+    // Desktop filters (delegated)
+    $("#desktopFilters").addEventListener("change", function (e) {
+      const sel = e.target.closest("select[data-filter]"); if (!sel) return;
+      const map = { "df-priority": "priority", "df-label": "label", "df-due": "due", "df-sort": "sort" };
+      const key = map[sel.getAttribute("data-filter")]; if (key) setFilter(key, sel.value);
+    });
+    $("#desktopFilters").addEventListener("click", function (e) { if (e.target.closest("#df-clear")) clearAllFilters(); });
+
+    // Active filter chips
+    $("#activeFilters").addEventListener("click", function (e) {
+      const b = e.target.closest("[data-clearfilter]"); if (!b) return;
+      const key = b.getAttribute("data-clearfilter");
+      setFilter(key, key === "sort" ? "manual" : "all");
+    });
+
+    // Mobile filter sheet
+    $("#btnFiltersSheet").addEventListener("click", function () { renderFilterSheet(); openSheet("filterSheet"); });
+    $("#btnSheetApply").addEventListener("click", function () {
+      state.filters.priority = $("#fs-priority").value;
+      state.filters.label = $("#fs-label").value;
+      state.filters.due = $("#fs-due").value;
+      state.filters.sort = $("#fs-sort").value;
+      closeSheet("filterSheet"); renderData();
+    });
+    $("#btnSheetClear").addEventListener("click", function () {
+      $("#fs-priority").value = "all"; $("#fs-label").value = "all"; $("#fs-due").value = "all"; $("#fs-sort").value = "manual";
+    });
+
+    // Mobile column navigation
+    $("#mcolPrev").addEventListener("click", function () { ui.listView = false; goColumn(-1); });
+    $("#mcolNext").addEventListener("click", function () { ui.listView = false; goColumn(1); });
+    $("#mcolChips").addEventListener("click", function (e) {
+      const chip = e.target.closest("[data-mcol]"); if (!chip) return;
+      ui.listView = false; ui.activeColIndex = +chip.getAttribute("data-mcol");
+      renderBoard(); scrollToColumn(ui.activeColIndex, true);
+    });
+    $("#btnAllTasks").addEventListener("click", function () { ui.listView = !ui.listView; renderBoard(); });
+    $("#btnAddColumnMobile").addEventListener("click", function () { openColForm(null); });
+    $("#board").addEventListener("scroll", debounce(updateActiveColFromScroll, 60));
+
+    // Board interactions (delegated)
+    const board = $("#board");
+    board.addEventListener("click", onBoardClick);
+    board.addEventListener("keydown", function (e) {
+      const card = e.target.closest(".card");
+      if (card && (e.key === "Enter" || e.key === " ") && e.target === card) {
+        e.preventDefault(); openDetail(card.getAttribute("data-task"));
+      }
+    });
+    board.addEventListener("dragstart", onDragStart);
+    board.addEventListener("dragend", onDragEnd);
+    board.addEventListener("dragover", onDragOver);
+    board.addEventListener("drop", onDrop);
+    board.addEventListener("dragleave", function (e) {
+      const col = e.target.closest(".column");
+      if (col && !col.contains(e.relatedTarget)) col.classList.remove("drop-target");
+    });
+
+    // Task form
+    $("#taskForm").addEventListener("input", function () { ui.formDirty = true; });
+    $("#taskForm").addEventListener("submit", function (e) { e.preventDefault(); saveTaskForm(); });
+    $("#btnSaveTask").addEventListener("click", saveTaskForm);
+    $("#btnAddChk").addEventListener("click", function () {
+      ui.formChecklist.push({ id: uid(), text: "", done: false });
+      renderFormChecklist();
+      const inputs = $$("#f-checklist [data-chk-text]");
+      if (inputs.length) inputs[inputs.length - 1].focus();
+      ui.formDirty = true;
+    });
+    $("#f-checklist").addEventListener("input", function (e) {
+      const rowEl = e.target.closest("[data-chk]"); if (!rowEl) return;
+      const i = +rowEl.getAttribute("data-chk");
+      if (e.target.matches("[data-chk-text]")) ui.formChecklist[i].text = e.target.value;
+      if (e.target.matches("[data-chk-done]")) { ui.formChecklist[i].done = e.target.checked; rowEl.classList.toggle("done", e.target.checked); }
+      ui.formDirty = true;
+    });
+    $("#f-checklist").addEventListener("click", function (e) {
+      const del = e.target.closest("[data-chk-del]"); if (!del) return;
+      const rowEl = del.closest("[data-chk]");
+      ui.formChecklist.splice(+rowEl.getAttribute("data-chk"), 1);
+      renderFormChecklist(); ui.formDirty = true;
+    });
+    $("#f-title").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); saveTaskForm(); } });
+    $("#f-title").addEventListener("input", function () { clearFieldError("f-title-wrap"); });
+    $("#btnDeleteFromForm").addEventListener("click", function () {
+      const id = ui.editingTaskId; if (!id) return;
+      confirmDialog(t("confirmDeleteTask"), t("delete")).then(function (ok) {
+        if (!ok) return;
+        deleteTask(id); closeOverlay("taskOverlay"); renderData(); toast(t("taskDeleted"), "ok");
+      });
+    });
+
+    // Detail dialog
+    $("#btnDetailEdit").addEventListener("click", function () { const id = ui.detailTaskId; closeOverlay("detailOverlay"); openTaskForm(id); });
+    $("#btnDetailDup").addEventListener("click", function () {
+      const c = duplicateTask(ui.detailTaskId); closeOverlay("detailOverlay"); renderData();
+      if (c) toast(t("taskDuplicated"), "ok");
+    });
+    $("#btnDetailDelete").addEventListener("click", function () {
+      const id = ui.detailTaskId;
+      confirmDialog(t("confirmDeleteTask"), t("delete")).then(function (ok) {
+        if (!ok) return;
+        deleteTask(id); closeOverlay("detailOverlay"); renderData(); toast(t("taskDeleted"), "ok");
+      });
+    });
+    $("#detailBody").addEventListener("change", function (e) {
+      const chk = e.target.closest("[data-detail-chk]"); if (!chk) return;
+      const task = getTask(ui.detailTaskId); if (!task) return;
+      const item = task.checklist.find(function (i) { return i.id === chk.getAttribute("data-detail-chk"); });
+      if (item) { item.done = chk.checked; task.updatedAt = nowISO(); saveData(); renderSummary(); renderBoard(); openDetail(ui.detailTaskId); }
+    });
+
+    // Column dialog
+    $("#colForm").addEventListener("submit", function (e) { e.preventDefault(); saveColForm(); });
+    $("#btnSaveCol").addEventListener("click", saveColForm);
+    $("#c-name").addEventListener("input", function () { clearFieldError("c-name-wrap"); });
+    $("#c-name").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); saveColForm(); } });
+    $("#c-swatches").addEventListener("click", function (e) {
+      const s = e.target.closest("[data-swatch]"); if (!s) return;
+      ui.colFormColor = s.getAttribute("data-swatch"); renderSwatches();
+    });
+
+    // Confirm dialog
+    $("#confirmOk").addEventListener("click", function () { resolveConfirm(true); });
+    $("#confirmCancel").addEventListener("click", function () { resolveConfirm(false); });
+    $("#confirmOverlay").addEventListener("click", function (e) { if (e.target === this) resolveConfirm(false); });
+
+    // Generic close (backdrop [data-close])
+    document.addEventListener("click", function (e) {
+      const closer = e.target.closest("[data-close]"); if (!closer) return;
+      const which = closer.getAttribute("data-close");
+      if (which === "task") attemptCloseTaskForm();
+      else if (which === "detail") closeOverlay("detailOverlay");
+      else if (which === "col") closeOverlay("colOverlay");
+      else if (which === "filter") closeSheet("filterSheet");
+      else if (which === "mmenu") closeSheet("mobileMenu");
+    });
+    ["taskOverlay", "detailOverlay", "colOverlay"].forEach(function (id) {
+      $("#" + id).addEventListener("click", function (e) {
+        if (e.target === this) { if (id === "taskOverlay") attemptCloseTaskForm(); else closeOverlay(id); }
+      });
+    });
+
+    // Popover menu
+    $("#popMenu").addEventListener("click", function (e) {
+      const b = e.target.closest("[data-menuact]"); if (!b || b.disabled) return;
+      handlePopAction(b.getAttribute("data-menuact"), b.getAttribute("data-value"));
+      closePopMenu();
+    });
+    // Data menu
+    $("#dataMenu").addEventListener("click", function (e) {
+      const b = e.target.closest("[data-dataact]"); if (!b) return;
+      handleDataAction(b.getAttribute("data-dataact")); closeDataMenu();
+    });
+    // Mobile menu actions
+    $("#mobileMenuBody").addEventListener("click", function (e) {
+      const lang = e.target.closest("[data-mm-lang]");
+      if (lang) { setLanguage(lang.getAttribute("data-mm-lang")); renderMobileMenu(); return; }
+      const theme = e.target.closest("[data-mm-theme]");
+      if (theme) { setTheme(theme.getAttribute("data-mm-theme")); renderMobileMenu(); return; }
+      const act = e.target.closest("[data-mm]");
+      if (act) { closeSheet("mobileMenu"); handleDataAction(act.getAttribute("data-mm")); }
+    });
+
+    // Import file
+    $("#importFile").addEventListener("change", function () {
+      if (this.files && this.files[0]) handleImportFile(this.files[0]);
+      this.value = "";
+    });
+
+    // Close menus on outside click
+    document.addEventListener("click", function (e) {
+      if (!e.target.closest("#popMenu") && !e.target.closest("[data-act='menu']") && !e.target.closest("[data-act='col-menu']")) closePopMenu();
+      if (!e.target.closest("#dataMenu") && !e.target.closest("#btnData")) closeDataMenu();
+    });
+    // Escape closes lightweight popovers (dialogs handled by trap)
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape") return;
+      if ($("#popMenu").classList.contains("open")) { closePopMenu(); return; }
+      if ($("#dataMenu").classList.contains("open")) { closeDataMenu(); return; }
+    });
+
+    // Resize: keep board layout consistent across breakpoint/orientation changes
+    window.addEventListener("resize", debounce(function () { renderBoard(); }, 150));
+    window.addEventListener("beforeunload", saveNow);
+  }
+
+  // Board click handler (delegated)
+  function onBoardClick(e) {
+    const collapseBtn = e.target.closest('[data-act="col-collapse"]');
+    if (collapseBtn) {
+      const col = getColumn(collapseBtn.closest(".column").getAttribute("data-col"));
+      updateColumn(col.id, { collapsed: !col.collapsed }); renderData(); return;
+    }
+    const colMenuBtn = e.target.closest('[data-act="col-menu"]');
+    if (colMenuBtn) {
+      const col = getColumn(colMenuBtn.closest(".column").getAttribute("data-col"));
+      ui.popContext = { type: "col", id: col.id };
+      openPopMenu(colMenuBtn, columnMenuItems(col)); return;
+    }
+    const colAddBtn = e.target.closest('[data-act="col-add"]');
+    if (colAddBtn) { openTaskForm(null, colAddBtn.closest(".column").getAttribute("data-col")); return; }
+
+    const card = e.target.closest(".card"); if (!card) return;
+    const taskId = card.getAttribute("data-task");
+    if (e.target.closest('[data-act="toggle-complete"]')) {
+      const done = toggleComplete(taskId); renderData();
+      toast(done ? t("taskCompleted") : t("taskReopened"), "ok"); return;
+    }
+    const menuBtn = e.target.closest('[data-act="menu"]');
+    if (menuBtn) { ui.popContext = { type: "task", id: taskId }; openPopMenu(menuBtn, taskMenuItems(getTask(taskId))); return; }
+    if (e.target.closest("[data-noopen]")) return;
+    openDetail(taskId);
+  }
+
+  // Popover action handler
+  function handlePopAction(act, value) {
+    const ctx = ui.popContext; if (!ctx) return;
+    if (ctx.type === "task") {
+      const id = ctx.id;
+      if (act === "edit") openTaskForm(id);
+      else if (act === "complete") { const d = toggleComplete(id); renderData(); toast(d ? t("taskCompleted") : t("taskReopened"), "ok"); }
+      else if (act === "duplicate") { duplicateTask(id); renderData(); toast(t("taskDuplicated"), "ok"); }
+      else if (act === "move-prev") { if (moveTaskRelative(id, -1)) { renderData(); toast(t("taskMoved"), "ok"); } }
+      else if (act === "move-next") { if (moveTaskRelative(id, 1)) { renderData(); toast(t("taskMoved"), "ok"); } }
+      else if (act === "move-col") { moveTaskToColumn(id, value); renderData(); toast(t("taskMoved"), "ok"); }
+      else if (act === "delete") {
+        confirmDialog(t("confirmDeleteTask"), t("delete")).then(function (ok) { if (ok) { deleteTask(id); renderData(); toast(t("taskDeleted"), "ok"); } });
+      }
+    } else if (ctx.type === "col") {
+      const id = ctx.id; const col = getColumn(id);
+      if (act === "col-add-task") openTaskForm(null, id);
+      else if (act === "col-rename") openColForm(id);
+      else if (act === "col-collapse") { updateColumn(id, { collapsed: !col.collapsed }); renderData(); }
+      else if (act === "col-left") { moveColumn(id, -1); syncActiveToCol(id); renderData(); }
+      else if (act === "col-right") { moveColumn(id, 1); syncActiveToCol(id); renderData(); }
+      else if (act === "col-delete") {
+        const n = tasksInColumn(id).length;
+        const msg = n ? t("confirmDeleteColumnTasks").replace("{n}", n) : t("confirmDeleteColumnEmpty");
+        confirmDialog(msg, t("delete")).then(function (ok) {
+          if (!ok) return;
+          deleteColumn(id);
+          ui.activeColIndex = Math.max(0, Math.min(ui.activeColIndex, sortedColumns().length - 1));
+          renderData(); toast(t("columnDeleted"), "ok");
+        });
+      }
+    }
+  }
+  function syncActiveToCol(colId) {
+    const idx = sortedColumns().findIndex(function (c) { return c.id === colId; });
+    if (idx >= 0) ui.activeColIndex = idx;
+  }
+  function handleDataAction(act) {
+    if (act === "export") exportBackup();
+    else if (act === "import") $("#importFile").click();
+    else if (act === "reset") resetBoard();
+    else if (act === "demo") loadDemo(state.tasks.length > 0);
+  }
+  function toggleDataMenu(anchor) {
+    const menu = $("#dataMenu");
+    if (menu.classList.contains("open")) closeDataMenu(); else openDataMenu(anchor);
+  }
+
+  /* =====================================================================
+     SECTION Y — Init
+     ===================================================================== */
+  function init() {
+    const loaded = loadData();
+    if (loaded === null) {
+      // First launch ever: seed demo data once.
+      state = defaultData();
+      state.demoSeeded = true;
+      seedDemoTasks();
+      saveNow();
+    } else {
+      state = loaded;
+    }
+    wireEvents();
+    renderAll();
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+
+})();
+</script>
+</body>
 </html>
