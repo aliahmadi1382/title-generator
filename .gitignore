@@ -14,6 +14,9 @@ dist-ssr
 # vercel
 .vercel
 
+# local Claude Code settings (machine-specific; keep launch.json tracked)
+.claude/settings.local.json
+
 # private source spreadsheets (reference data is generated into src/data/catalog.ts)
 *.xlsx
 
