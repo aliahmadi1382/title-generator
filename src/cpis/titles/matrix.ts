@@ -1,4 +1,4 @@
-// Generated from Pejmana1978/cpis @ 85cb5c3f6765a7cb901018bc5f992ea021238d64.
+// Generated from Pejmana1978/cpis @ ce26ca5c3034d4d87ede710323f6409b8fe9456e.
 // Source: modules/listings/core/titles/matrix.ts
 // Do not edit here. Run npm run sync:cpis to refresh the reviewed source.
 
