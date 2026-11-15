@@ -63,7 +63,11 @@ try {
   assert.equal(csv.trim().split('\r\n').length, 73);
   assert.match(csv, /Toyota/);
   await page.getByRole('button', { name: 'Expand All', exact: true }).click();
+  await page.bringToFront();
   await page.getByRole('button', { name: 'Copy title', exact: true }).first().click();
+  // The click starts an asynchronous Clipboard API write. Wait for its UI
+  // acknowledgement before reading the OS clipboard, especially on fast CI.
+  await page.getByRole('button', { name: 'Copy title', exact: true }).first().getByText('Copied', { exact: true }).waitFor();
   assert.match(await app.evaluate(({ clipboard }) => clipboard.readText()), /Camry/);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: path.join(output, 'desktop-matrix.png') });
