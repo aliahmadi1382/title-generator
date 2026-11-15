@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import { exerciseCpis } from './smoke-cpis.mjs';
 
 await mkdir('test-results', { recursive: true });
 const profile = await mkdtemp(path.join(os.tmpdir(), 'title-generator-smoke-'));
@@ -100,6 +101,7 @@ try {
   await page.getByRole('heading', { name: 'Account Settings', exact: true }).waitFor();
   await page.getByRole('button', { name: 'Rules Summary', exact: true }).click();
   await page.getByRole('heading', { name: /Rules/ }).first().waitFor();
+  await exerciseCpis(page, downloadFile);
   assert.deepEqual(errors, []);
   console.log('PASS: sandbox, 72 titles, offline generation, CSV download/import, clipboard, SEO, saved history, settings and theme after restart.');
 } catch (error) {

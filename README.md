@@ -19,6 +19,58 @@ generation engine, including the Variation Matrix, custom variations, SEO,
 CSV account conversion, History and Account Settings. Generation works offline.
 There is no separate copy of the title rules to maintain.
 
+## CPIS rules
+
+The title and SEO engine is synchronized from CPIS commit
+`85cb5c3f6765a7cb901018bc5f992ea021238d64`. **Rules Summary** shows the source
+revision in the app; saved sessions record the revision used to generate them.
+
+- Regular titles use CPIS account defaults, shortening and variation rules.
+  DSA writes **Beige** for Tan; other accounts keep their own colour rules.
+- **Competitor research rules** are opt-in for U.S.AutoNation,
+  U.S.AutoSeatFactory and Elite, with an explicit recorded trim field.
+- Premium and DSA support **Regular**, **Multi (front collection)** and
+  **Multi Bottoms**. Each Multi collection shares one parent title; editing
+  one of its rows updates all rows in that collection.
+- **Center Console** and **Foam Cushion** custom products are Premium-only.
+  Foam requires its own seat row, physical side, seat part, A/C configuration
+  and colour; it does not inherit seat-cover material or colour.
+- Matrix SEO uses the original vehicle/product facts and the edited title,
+  preserving full years even after title shortening. Manual SEO lets users
+  review parsed facts. DSA UK wording and special-product SEO follow CPIS.
+- Imported unstructured console/foam titles go to manual review; use the
+  structured custom-product form to supply their required facts.
+
+Existing saved results and account customizations remain intact. Reopen and
+regenerate older sessions to apply the current rules. Account customizations
+can intentionally differ from CPIS defaults; reset accounts only if desired.
+
+### Maintaining the CPIS source snapshot
+
+`src/cpis/` is generated from an explicit allowlist of pure CPIS modules and
+selected declarations. Do not edit generated files. The manifest records the
+source commit and hashes; lint verifies all generated files. The adapter in
+`src/lib/matrix.ts` supplies the standalone interface and CPIS preparation order.
+
+From a trusted local CPIS checkout with a current `origin/main`:
+
+```powershell
+npm run sync:cpis -- --source 'C:\Users\Asus\Desktop\Git-Hub\cpis'
+npm run sync:cpis -- --source 'C:\Users\Asus\Desktop\Git-Hub\cpis' --check
+npm run lint
+npm test
+npm run build
+npm run test:desktop
+```
+
+An optional `--ref <commit>` pins a reviewed revision. The sync reads committed
+Git objects, not uncommitted files. Review the source changes and test fixtures
+before pushing this repository. A changed source declaration fails extraction
+instead of silently dropping a rule. The desktop release uses the checked-in
+snapshot; it does **not** automatically read private CPIS commits. No CPIS
+credentials, database access or marketplace API is included. After a reviewed
+sync is pushed to this repository, its normal release flow updates teammates.
+
 **Updates:** every push to `main` starts the Windows desktop release workflow.
 It runs lint, tests, the production build and an end-to-end smoke test of the
 packaged application, then publishes the installer, blockmap and `latest.yml`
@@ -86,10 +138,9 @@ References: [Electron security](https://www.electronjs.org/docs/latest/tutorial/
   on-demand picker for ~60 additional variations. Custom variations use the
   exact same title/shortening rules as the main 9.
 - **SEO** — generate **Meta Tags**, a **Meta Description**, and an
-  account-specific **Mobile Description** from a Variation Matrix title or a
-  manually entered one. Parses the title (year expansion, chassis/series like
-  `W222`, material/color/position, abbreviation expansion `Dk→dark`,
-  `Perf→perforated`), edit inline, Copy All, or **Export SEO CSV**
+  account-specific **Mobile Description** from a Variation Matrix title and
+  its original facts, or from a manual title with editable parsed facts.
+  Edit inline, Copy All, or **Export SEO CSV**
   (`title, account_name, meta_tags, meta_description, mobile_description`).
   Mobile templates are editable per account in Account Settings.
 - **CSV Account Title Generator** — upload a CSV of existing `item_id,title`
@@ -144,8 +195,9 @@ Accounts live in [`src/config/accounts.ts`](src/config/accounts.ts). Each one is
 }
 ```
 
-**To add an account later:** append an object to `DEFAULT_ACCOUNTS` (or use the
-in-app **Account Settings** panel). The Manual Generator, Batch Processor,
+**To add an account locally:** use the in-app **Account Settings** panel.
+Default account changes belong in CPIS and are brought across by the sync.
+The Manual Generator, Batch Processor,
 exports, and History all pick it up automatically — no other code changes. The
 generator simply loops over the enabled accounts
 ([`generateForAllAccounts`](src/titleGenerator.ts)).
@@ -166,8 +218,8 @@ optional list, built from a simple label array). A variation just supplies the
 seat-component wording placed into each account's title, so all title and
 abbreviation rules apply automatically.
 
-**To add a variation:** add an object to `MAIN_VARIATIONS`, or add a label to
-`CUSTOM_LABELS`.
+**To add a variation:** use the custom-label field for a local variation.
+Changes to the shared main/custom lists belong in CPIS and are synchronized.
 
 **Main variation phrase fallback** — each of the 9 main variations has an
 ordered `phraseStages` list (in
@@ -325,7 +377,8 @@ and the visual color word is **never** removed.
   made distinct it is flagged `CHECK` for manual review (notes: "Duplicate
   avoided with alternate account pattern" / "Duplicate title detected" /
   "Similar title detected" / "Manual review needed for uniqueness or length").
-- Fitment limited to **Fits** (preferred) / **For**. When a title is over 80,
+- Fitment uses each account's **Fits** / **For** preference unless explicitly
+  overridden in the form. When a title is over 80,
   shortening is applied in order: approved abbreviations → switch `Fits`→`For` →
   shorten the year ending (`2000-2010`→`2000-10`) → shorten the year fully
   (`00-10`) → shorter product wording (`Cover`) → otherwise flag `Too Long` /
@@ -348,7 +401,8 @@ and the visual color word is **never** removed.
   `With→w/`, `Without→w/o`, `And→&`, `Bottom→Lower`,
   `Backrest→Back`, `Lean Back→Leanback`.
 
-All logic lives in [`src/titleGenerator.ts`](src/titleGenerator.ts).
+Canonical rules live in [`src/cpis/`](src/cpis/); the historical import paths
+re-export them so the web and desktop applications use the same engine.
 
 ---
 
@@ -364,10 +418,11 @@ Title Generator/
     ├── main.tsx                  # React entry point
     ├── App.tsx                   # app shell + tabs + shared state
     ├── types.ts                  # shared types
-    ├── titleGenerator.ts         # rule-based engine (per-account generation)
+    ├── cpis/                     # generated CPIS rules and source manifest
+    ├── titleGenerator.ts         # re-export of the canonical CPIS engine
     ├── config/
-    │   ├── accounts.ts           # 🔧 account configuration (edit me to add accounts)
-    │   └── variations.ts         # 🔧 variation configuration (9 main + custom list)
+    │   ├── accounts.ts           # CPIS default account re-export
+    │   └── variations.ts         # CPIS variation configuration re-export
     ├── lib/
     │   ├── csv.ts                # CSV parse + batch export builders
     │   ├── matrix.ts             # variation-matrix generation + export builders

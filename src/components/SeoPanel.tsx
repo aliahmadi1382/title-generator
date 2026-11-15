@@ -5,9 +5,10 @@
 
 import { useMemo, useState } from "react";
 import type { AccountConfig } from "../types";
-import { buildSeoCsv, generateSeo } from "../lib/seoGenerator";
+import { buildSeoCsv, generateSeo, parseSeoFacts, type SeoFacts } from "../lib/seoGenerator";
+import { MAIN_VARIATIONS, CUSTOM_VARIATIONS } from '../config/variations';
 import { downloadText } from "../lib/download";
-import { CopyButton } from "./ui";
+import { CopyButton, Field } from "./ui";
 import type { MatrixTitleRef } from "../types";
 
 interface Props {
@@ -57,6 +58,7 @@ export function SeoPanel({ accounts, matrixTitles }: Props) {
   const [source, setSource] = useState<"matrix" | "manual">("manual");
   const [matrixIdx, setMatrixIdx] = useState(0);
   const [manualTitle, setManualTitle] = useState("");
+  const [manualFacts, setManualFacts] = useState<SeoFacts>(() => parseSeoFacts(''));
   const [accountId, setAccountId] = useState<string>(() => activeAccounts[0]?.id ?? "");
   const [seo, setSeo] = useState<EditableSeo | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
@@ -87,7 +89,8 @@ export function SeoPanel({ accounts, matrixTitles }: Props) {
       return;
     }
     setWarning(null);
-    const r = generateSeo(title, selectedAccount);
+    const facts = source === 'matrix' ? matrixForAccount[matrixIdx]?.facts : manualFacts;
+    const r = generateSeo(title, selectedAccount, facts);
     setSeo({
       title: r.title,
       accountName: r.accountName,
@@ -162,11 +165,35 @@ export function SeoPanel({ accounts, matrixTitles }: Props) {
       ) : (
         <input
           value={manualTitle}
-          onChange={(e) => setManualTitle(e.target.value)}
+          onChange={(e) => { setManualTitle(e.target.value); setManualFacts(parseSeoFacts(e.target.value)); }}
           placeholder="e.g. 2014-2020 Fits Mercedes-Benz S-Class W222 Driver Bottom Leather Prf. Cover Black"
           aria-label="Manual title"
         />
       )}
+
+      {source === 'manual' ? (
+        <div className="cpis-rule-controls">
+          <h3>Review product facts for SEO</h3>
+          <p className="muted-hint">Check the facts read from your title. CPIS generates SEO from these fields, keeping full years and the correct product identity.</p>
+          <div className="form-grid">
+            {([['yearRange', 'Full years'], ['make', 'Make'], ['model', 'Model'], ['material', 'Material'], ['color', 'Color']] as const).map(([key, label]) => (
+              <Field key={key} label={label}>
+                <input aria-label={`SEO ${label}`} value={manualFacts[key]}
+                  onChange={event => setManualFacts(previous => ({ ...previous, [key]: event.target.value }))} />
+              </Field>
+            ))}
+            <Field label="Product / variation">
+              <select aria-label="SEO product variation" value={manualFacts.variationId ?? ''} onChange={event => {
+                const variation = [...MAIN_VARIATIONS, ...CUSTOM_VARIATIONS].find(item => item.id === event.target.value);
+                setManualFacts(previous => ({ ...previous, variationId: variation?.id ?? '', variation: variation?.label ?? '' }));
+              }}>
+                <option value="">Seat cover — unspecified variation</option>
+                {[...MAIN_VARIATIONS, ...CUSTOM_VARIATIONS].map(variation => <option key={variation.id} value={variation.id}>{variation.label}</option>)}
+              </select>
+            </Field>
+          </div>
+        </div>
+      ) : <p className="muted-hint">SEO uses the product facts saved with this matrix result, including full years. Edited titles are included.</p>}
 
       {/* Step 3 — Generate */}
       <div className="step-head"><span className="step-num">3</span> Generate SEO</div>

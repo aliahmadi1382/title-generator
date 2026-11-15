@@ -18,7 +18,11 @@ import type {
 } from "../types";
 import { evaluateTitle, MAX_LENGTH } from "../titleGenerator";
 import { MAIN_VARIATIONS, CUSTOM_VARIATIONS } from "../config/variations";
-import { buildAccountBlocks, buildMatrixCsv, countBlocks } from "../lib/matrix";
+import { buildAccountBlocks, buildMatrixCsv, countBlocks, matrixTitleRefs, editAccountTitle } from "../lib/matrix";
+import { CpisRuleControls } from './CpisRuleControls';
+import { FoamTitleFields } from './FoamTitleFields';
+import { premiumMultiRules } from '../cpis/templates/premiumListingFormat';
+import rulesManifest from '../cpis/manifest.json';
 import { downloadText } from "../lib/download";
 import { CharCount, CopyButton, Field, RiskBadge, StatusBadge } from "./ui";
 import { Autocomplete } from "./Autocomplete";
@@ -101,6 +105,7 @@ function VariationRow({ t, onEdit }: { t: MatrixTitle; onEdit: (value: string) =
         <CharCount count={ev.characterCount} max={MAX_LENGTH} />
         <CopyButton text={t.editedTitle} />
       </span>
+      {(t.ruleMode === 'multi' || t.ruleMode === 'multi-bottoms') && <span className="note-inline">Shared parent title · {t.ruleMode === 'multi' ? 'Multi front collection' : 'Multi Bottoms'}</span>}
       {noteText && <span className="note-inline">{noteText}</span>}
     </li>
   );
@@ -164,28 +169,14 @@ interface Props {
 }
 
 /** Flatten account blocks into title refs (with account info) for the SEO selector. */
-function flattenTitles(...groups: (AccountBlock[] | null)[]): MatrixTitleRef[] {
-  const out: MatrixTitleRef[] = [];
-  for (const blocks of groups) {
-    for (const b of blocks ?? []) {
-      for (const t of b.titles) {
-        out.push({
-          accountId: b.accountId,
-          accountName: b.accountName,
-          variationName: t.variationName,
-          label: `${b.accountName} · ${t.variationName}`,
-          title: t.editedTitle,
-        });
-      }
-    }
-  }
-  return out;
+function flattenTitles(base: MatrixBaseInput, ...groups: (AccountBlock[] | null)[]): MatrixTitleRef[] {
+  return groups.flatMap(blocks => matrixTitleRefs(blocks ?? [], base));
 }
 
 export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props) {
   const [base, setBase] = useState<MatrixBaseInput>(EMPTY_BASE);
   const [includeAdditional, setIncludeAdditional] = useState(false);
-  const [useFits, setUseFits] = useState(true);
+  const [useFits, setUseFits] = useState(false);
   const [missing, setMissing] = useState<string[]>([]);
 
   const activeAccounts = useMemo(() => accounts.filter((a) => a.enabled), [accounts]);
@@ -217,6 +208,10 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
       setMainBlocks(restored.mainBlocks.length ? restored.mainBlocks : null);
       setCustomBlocks(restored.customBlocks.length ? restored.customBlocks : null);
       setIncludeAdditional(restored.base.additionalVariation.trim().length > 0);
+      setUseFits(restored.base.ruleOptions?.preferFits ?? false);
+      const customRows = restored.customBlocks.flatMap(block => block.titles);
+      setCustomSelected(new Set(customRows.filter(title => CUSTOM_VARIATIONS.some(variation => variation.id === title.variationId)).map(title => title.variationId)));
+      setCustomTyped([...new Set(customRows.filter(title => title.variationId.startsWith('typed-')).map(title => title.variationName))]);
       const ids = new Set<string>([
         ...restored.mainBlocks.map((b) => b.accountId),
         ...restored.customBlocks.map((b) => b.accountId),
@@ -226,6 +221,11 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
       setOpenCustom(new Set());
     }
   }, [restored]);
+
+  // Edits and restored sessions must also reach SEO with the original facts.
+  useEffect(() => {
+    onResults?.(flattenTitles(usedBase, mainBlocks, customBlocks));
+  }, [mainBlocks, customBlocks, usedBase, onResults]);
 
   // "Use Fits when possible" prefers Fits for every account (the engine still
   // falls back to "For" automatically when a title is too long).
@@ -254,13 +254,14 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
   const effectiveBase = (): MatrixBaseInput => ({
     ...base,
     additionalVariation: includeAdditional ? base.additionalVariation : "",
+    ruleOptions: { ...base.ruleOptions, preferFits: useFits },
   });
 
   const selectedAccounts = (): AccountConfig[] =>
     effectiveAccounts.filter((a) => a.enabled && selectedAccountIds.has(a.id));
 
-  const validate = (): boolean => {
-    const m = REQUIRED.filter(({ key }) => String(base[key]).trim().length === 0).map(({ label }) => label);
+  const validate = (foamOnly = false): boolean => {
+    const m = REQUIRED.filter(({ key }) => !(foamOnly && (key === 'material' || key === 'color')) && String(base[key]).trim().length === 0).map(({ label }) => label);
     if (selectedAccountIds.size === 0) m.push("Select at least one account");
     setMissing(m);
     return m.length === 0;
@@ -273,11 +274,9 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
     const blocks = buildAccountBlocks(eb, MAIN_VARIATIONS, selectedAccounts());
     setMainBlocks(blocks);
     setOpenMain(new Set());
-    onResults?.(flattenTitles(blocks, customBlocks));
   };
 
   const handleGenerateCustom = () => {
-    if (!validate()) return;
     const selectedConfigs = CUSTOM_VARIATIONS.filter((v) => customSelected.has(v.id));
     const typedConfigs: VariationConfig[] = customTyped.map((label, i) => ({
       id: `typed-${i}-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
@@ -287,16 +286,23 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
       sortOrder: 1000 + i,
     }));
     const list = [...selectedConfigs, ...typedConfigs];
+    if (!validate(list.length === 1 && list[0].id === 'c4')) return;
     if (list.length === 0) {
       setMissing(["Select or type at least one custom variation"]);
       return;
     }
     const eb = effectiveBase();
     setUsedBase(eb);
-    const blocks = buildAccountBlocks(eb, list, selectedAccounts());
+    let blocks: AccountBlock[];
+    try {
+      blocks = buildAccountBlocks(eb, list, selectedAccounts());
+    } catch (error) {
+      setMissing([error instanceof Error ? error.message : 'Review the custom product facts.']);
+      return;
+    }
     setCustomBlocks(blocks);
     setOpenCustom(new Set());
-    onResults?.(flattenTitles(mainBlocks, blocks));
+    if (!blocks.length) setMissing(['The selected custom product requires the Premium account.']);
   };
 
   const handleClear = () => {
@@ -318,11 +324,7 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
   ) => {
     setter((prev) =>
       prev
-        ? prev.map((b) =>
-            b.accountId === accountId
-              ? { ...b, titles: b.titles.map((t) => (t.variationId === variationId ? { ...t, editedTitle: value } : t)) }
-              : b,
-          )
+        ? editAccountTitle(prev, accountId, variationId, value)
         : prev,
     );
   };
@@ -367,6 +369,7 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
       base: usedBase,
       mainBlocks: mainBlocks ?? [],
       customBlocks: customBlocks ?? [],
+      rulesRevision: rulesManifest.commit,
     };
     onSave(record);
     setSaved(true);
@@ -374,7 +377,8 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
   };
 
   const mainVarCount = MAIN_VARIATIONS.filter((v) => v.enabled).length;
-  const expectedTotal = mainVarCount * selectedAccountIds.size;
+  const expectedTotal = activeAccounts.filter(account => selectedAccountIds.has(account.id)).reduce((total, account) =>
+    total + (premiumMultiRules(base.ruleOptions?.formats?.[account.id] ?? 'regular')?.values.length ?? mainVarCount), 0);
   const filteredCustom = CUSTOM_VARIATIONS.filter((v) => v.label.toLowerCase().includes(customSearch.toLowerCase()));
 
   return (
@@ -466,7 +470,7 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
           </label>
           <label className="toggle">
             <input type="checkbox" checked={useFits} onChange={(e) => setUseFits(e.target.checked)} />
-            <span>Use “Fits” when possible</span>
+            <span>Override account fitment with “Fits”</span>
           </label>
         </div>
       </section>
@@ -495,6 +499,9 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
           {activeAccounts.length === 0 && <span className="muted-hint">No active accounts — enable some in Account Settings.</span>}
         </div>
 
+        <CpisRuleControls accounts={activeAccounts.filter(account => selectedAccountIds.has(account.id))}
+          value={base.ruleOptions} onChange={options => update('ruleOptions', options)} />
+
         {missing.length > 0 && (
           <div className="warning" role="alert">
             <strong>Please complete:</strong> {missing.join(", ")}
@@ -503,14 +510,14 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
 
         <div className="form-actions">
           <button type="button" className="btn btn-primary" onClick={handleGenerateMain}>
-            Generate Main 9 Variations
+            {expectedTotal === mainVarCount * selectedAccountIds.size ? 'Generate Main 9 Variations' : 'Generate Selected Formats'}
           </button>
           <button type="button" className="btn btn-ghost" onClick={handleClear}>
             Clear
           </button>
         </div>
         <p className="muted-hint">
-          {mainVarCount} main variations × {selectedAccountIds.size} selected accounts = <strong>{expectedTotal}</strong> titles.
+          <strong>{expectedTotal}</strong> variation rows across {selectedAccountIds.size} selected accounts. Multi rows share their collection’s parent title.
         </p>
       </section>
 
@@ -561,6 +568,9 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
           Pick from {CUSTOM_VARIATIONS.length} additional variations (or type your own), then generate titles for the
           selected accounts. The main 9 are not affected.
         </p>
+        <p className="muted-hint">Center Console and Foam Cushion are Premium-only products in CPIS.</p>
+        {customSelected.has('c4') && <FoamTitleFields value={base.ruleOptions?.foam}
+          onChange={foam => update('ruleOptions', { ...base.ruleOptions, foam })} />}
         <div className="custom-picker">
           <input className="custom-search" value={customSearch} onChange={(e) => setCustomSearch(e.target.value)} placeholder="Search variations…" />
           <div className="custom-checklist">

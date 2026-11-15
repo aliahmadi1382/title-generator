@@ -63,6 +63,7 @@ export function HistoryPanel({ records, onReopen, onDelete, onClearAll }: Props)
                     <span className="history-date">{rec.dateTime}</span>
                   </div>
                   <div className="history-stats">
+                    {rec.kind === 'matrix' && <span>{rec.rulesRevision ? `CPIS ${rec.rulesRevision.slice(0, 7)}` : 'Earlier saved rules · regenerate to update'}</span>}
                     {isMatrix && <span>{titleCount} titles</span>}
                     {!isMatrix && <span>{rec.rowsProcessed ?? 0} rows</span>}
                     {rec.kind === "convert" ? (

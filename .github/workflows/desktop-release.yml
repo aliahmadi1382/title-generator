@@ -56,6 +56,7 @@ jobs:
             exit 0
           }
           $version = (Get-Content package.json | ConvertFrom-Json).version
+          $cpisRevision = (Get-Content src/cpis/manifest.json | ConvertFrom-Json).commit
           $tag = "v$version"
           $existing = gh release view $tag --json isDraft --jq .isDraft 2>$null
           $exists = $LASTEXITCODE -eq 0
@@ -67,6 +68,8 @@ jobs:
           Windows 10/11 (64-bit) installer, built from commit ${{ github.sha }} in this repository.
 
           Includes the full Title Generator: Variation Matrix, SEO, CSV conversion, History and Account Settings.
+          Title and SEO rules synchronized from CPIS commit $cpisRevision.
+          Includes opt-in competitor rules, Premium/DSA Multi formats and Premium console/foam titles.
           Installed apps check this repository for updates. Save your work, then choose Restart to update.
           Settings and saved history remain on the same computer. No GitHub login is required.
 

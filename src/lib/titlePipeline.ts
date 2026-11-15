@@ -17,7 +17,7 @@
 import type { AccountConfig, GeneratedTitle } from "../types";
 import { cleanTitle } from "./cleanup";
 import { parseTitle, type ParseResult } from "./titleParser";
-import { generateForAccount, generateWithPhraseStages } from "../titleGenerator";
+import { generateForAccount, generateWithPhraseStages, evaluateTitle } from "../titleGenerator";
 
 export { cleanTitle, parseTitle, generateForAccount, generateWithPhraseStages };
 
@@ -35,6 +35,16 @@ export interface ProcessedTitle {
 export function processRawTitle(raw: string, account: AccountConfig): ProcessedTitle {
   const clean = cleanTitle(raw);
   const parse = parseTitle(clean.cleaned);
+  // Raw text cannot establish the dedicated console/foam product facts.
+  // Preserve it for review instead of inventing a generic seat-cover title.
+  if (/\bfoam\b|\bconsole\b/i.test(clean.cleaned)) {
+    const title = raw.trim();
+    return { cleaned: clean.cleaned, cleanupNotes: clean.notes, parse, generated: {
+      accountId: account.id, accountName: account.name, accountStyleId: account.styleId,
+      title, ...evaluateTitle(title), riskFlag: 'CHECK',
+      notes: 'Special product requires review. Use the Premium console or foam form in Variation Matrix to confirm its product facts.',
+    } };
+  }
   const generated = generateForAccount(parse.listing, account);
   return { cleaned: clean.cleaned, cleanupNotes: clean.notes, parse, generated };
 }

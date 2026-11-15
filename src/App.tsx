@@ -113,7 +113,7 @@ export default function App() {
             </span>
             <div className="app-header-text">
               <h1>Seat Cover Title Generator</h1>
-              <p>eBay title generation per account — all under 80 characters. 100% local · no AI.</p>
+              <p>CPIS title and SEO rules per account. Works offline · titles checked against 80 characters.</p>
             </div>
           </div>
           <button

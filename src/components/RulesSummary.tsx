@@ -4,11 +4,24 @@
 // ---------------------------------------------------------------------------
 
 import { TOKEN_LABELS, type AccountConfig } from "../types";
+import manifest from '../cpis/manifest.json';
 
 export function RulesSummary({ accounts }: { accounts: AccountConfig[] }) {
   return (
     <section className="card rules-card" aria-label="Rules summary">
       <h2 className="card-title">Rules Summary</h2>
+
+      <div className="cpis-rule-controls">
+        <h3>CPIS rules · {manifest.commit.slice(0, 7)}</h3>
+        <p>Title and SEO rules are synchronized from CPIS. Regular uses the official account styles. Competitor research rules are optional for U.S.AutoNation, U.S.AutoSeatFactory and Elite.</p>
+        <ul className="rules-list">
+          <li>Premium and DSA support Regular, Multi (front collection) and Multi Bottoms. Multi variations share one parent title.</li>
+          <li>DSA uses Beige in titles where the recorded color says Tan, with its own UK SEO and mobile copy.</li>
+          <li>Premium console lid covers and foam cushions have separate title and SEO wording.</li>
+          <li>Matrix SEO reads original product facts. Manual SEO lets you review those facts before generation.</li>
+          <li>Previously saved results remain unchanged. Regenerate them to apply the current rules. Account customizations are preserved.</li>
+        </ul>
+      </div>
 
       <div className="rules-grid">
         <div>
@@ -40,7 +53,7 @@ export function RulesSummary({ accounts }: { accounts: AccountConfig[] }) {
         <div>
           <h3>Length &amp; Status</h3>
           <ul className="rules-list">
-            <li>Every title is ≤ 80 characters, counting spaces, hyphens, slashes, commas, symbols, and periods.</li>
+            <li>The target is ≤ 80 characters, counting spaces, hyphens, slashes, commas, symbols, and periods.</li>
             <li>
               <span className="badge badge-good">Good</span> ≤ 70 ·{" "}
               <span className="badge badge-safe">Safe</span> 71–75 ·{" "}

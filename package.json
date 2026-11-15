@@ -1,7 +1,7 @@
 {
   "name": "seat-cover-title-generator",
   "private": true,
-  "version": "3.1.0",
+  "version": "3.2.0",
   "main": "desktop/main.cjs",
   "author": "United Seat Factory",
   "repository": { "type": "git", "url": "https://github.com/aliahmadi1382/title-generator.git" },
@@ -11,12 +11,13 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint . && tsc --noEmit",
+    "lint": "node scripts/sync-cpis.mjs --verify && eslint . && tsc --noEmit",
     "test": "node --test tests/*.test.cjs",
     "desktop": "npm run build && electron .",
     "desktop:pack": "electron-builder --win --x64 --dir --publish never",
     "desktop:dist": "electron-builder --win --x64 --publish never",
-    "test:desktop": "node scripts/smoke-desktop.mjs"
+    "test:desktop": "node scripts/smoke-desktop.mjs",
+    "sync:cpis": "node scripts/sync-cpis.mjs"
   },
   "dependencies": {
     "electron-updater": "6.8.11",

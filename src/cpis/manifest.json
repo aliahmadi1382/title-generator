@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "repository": "Pejmana1978/cpis",
+  "commit": "85cb5c3f6765a7cb901018bc5f992ea021238d64",
+  "sourceCommittedAt": "2026-11-15T11:53:38+03:30",
+  "files": [
+    {
+      "source": "modules/listings/core/titles/types.ts",
+      "target": "src/cpis/titles/types.ts",
+      "sourceSha256": "4d8d4d8108f76fea22f11ff2ef9acfa62706ff58339e9546b837000d8f39a170",
+      "generatedSha256": "1176a3d12260bbef1caeed989b91ea6409d4c0039c4a9b4d9568787591551aa4"
+    },
+    {
+      "source": "modules/listings/core/titles/titleGenerator.ts",
+      "target": "src/cpis/titles/titleGenerator.ts",
+      "sourceSha256": "014d6e46a8f43c43cdb519a22d8b2383c4b926ad0b8f8ed649a9c615c45c84db",
+      "generatedSha256": "40d2e6356acf591f9af942b6798cc13bf29d4a2b48d5e1266a6efdb96789151a"
+    },
+    {
+      "source": "modules/listings/core/titles/accounts.ts",
+      "target": "src/cpis/titles/accounts.ts",
+      "sourceSha256": "a818c3d735d280d16654393779b13f43702291ea5ae3e969ec371d7815b18c35",
+      "generatedSha256": "8f4aceed6a2f8b2b0e44e3d60a75fe2809266b5e6b46c92ef17aded8d0876e38"
+    },
+    {
+      "source": "modules/listings/core/titles/variations.ts",
+      "target": "src/cpis/titles/variations.ts",
+      "sourceSha256": "b0c130f11c6344d5d07dbe45489202648560eaec74a93928b56c20327bdf7520",
+      "generatedSha256": "5d19fbf09c41e7ef31ead8c67371a477b8cc12c3a2d01e78048fed9ee39243f6"
+    },
+    {
+      "source": "modules/listings/core/titles/variationPhraseStages.ts",
+      "target": "src/cpis/titles/variationPhraseStages.ts",
+      "sourceSha256": "7edc7ac73a8811a7c9e632416eae7e4c7b66e1192a80e041efb9f2cb1ab8ca7b",
+      "generatedSha256": "c05b3a7c8f1417828a5b14a0b03a6441ddcee43fc48902087752c09b3de03273"
+    },
+    {
+      "source": "modules/listings/core/titles/uniqueness.ts",
+      "target": "src/cpis/titles/uniqueness.ts",
+      "sourceSha256": "b0d52f1f60a1640e4d1ec1dd39bda2ea5775381caf554211b48f12ad5ed7b855",
+      "generatedSha256": "650dc67614c6406f6ee2186903060e5fc211e786d829e6c7e5a3795b1ecc5486"
+    },
+    {
+      "source": "modules/listings/core/titles/matrix.ts",
+      "target": "src/cpis/titles/matrix.ts",
+      "sourceSha256": "2962c2cac37a433fe94919333082ce9aa2ad73d1958c4333ddc1a8b55e7160d7",
+      "generatedSha256": "92f2430843fe4f4b0327a40d4f5a27e070153ab1215ee8ebae513b2cb97b56a7"
+    },
+    {
+      "source": "modules/listings/core/titles/csv.ts",
+      "target": "src/cpis/titles/csv.ts",
+      "sourceSha256": "f5576394cae43fd85979add2a4c5f5a61038ccfec2e6949b9cdfa41d6290dfa1",
+      "generatedSha256": "80eae0ec8d0d62f8dd3668f02fe0798d15b5e00740a2da464f5f94afe14e3ee5"
+    },
+    {
+      "source": "modules/listings/core/titles/catalogLookup.ts",
+      "target": "src/cpis/titles/catalogLookup.ts",
+      "sourceSha256": "61870880372e274b6ecc87f3ffab500aad4515bbf3514e5efcce447b460c4b4d",
+      "generatedSha256": "0c63647a66f5dcd388549dac591f39df31b220dcbe9aa52232ee3cc3fe4abedd"
+    },
+    {
+      "source": "modules/listings/core/titles/catalogData.ts",
+      "target": "src/cpis/titles/catalogData.ts",
+      "sourceSha256": "88b690d9cd3ed357e55b92b4c9abd552dd2663503c52fb9d9955937c4d3a7019",
+      "generatedSha256": "452d6f4b90e129cd8f3a12ba71e5eded75f6db7ac9a37212623ece799a814607"
+    },
+    {
+      "source": "modules/listings/core/titles/competitorRules.ts",
+      "target": "src/cpis/titles/competitorRules.ts",
+      "sourceSha256": "bf2b6ea9841d625649064e5f2fff310b7c8a6a60e5c7d1e6607f389d1f5aeea9",
+      "generatedSha256": "7ab553c5f7113a549fda79fcefceed19e93cc41a99eb1d58f6cab60f21382a7b"
+    },
+    {
+      "source": "modules/listings/core/productFactWording.ts",
+      "target": "src/cpis/productFactWording.ts",
+      "sourceSha256": "91bd5260dbf577e74f0a3234ea9ee14990b1cc048e381e00517558a0535ff2cc",
+      "generatedSha256": "9029cc351b59e8d1d4fbccb1c06a7b687589aeb7544a7cfba71fe00b7e73177d",
+      "declarations": [
+        "MATERIALS",
+        "listingMaterialWording",
+        "dsaColourLabel"
+      ]
+    },
+    {
+      "source": "modules/listings/core/titles/premiumMulti.ts",
+      "target": "src/cpis/titles/premiumMulti.ts",
+      "sourceSha256": "571a71f40ea4cfb688a306f04131ab5e23d1189375dc7bbf78a823e5e25250ed",
+      "generatedSha256": "bb472bd22dd01094d7b01d126d6e08d9b17c8e867f276badddb7fa14a42e75fc",
+      "declarations": [
+        "PREMIUM",
+        "PREMIUM_MULTI_TITLE_ID",
+        "PREMIUM_BOTTOMS_MULTI_TITLE_ID",
+        "premiumMultiTitle"
+      ]
+    },
+    {
+      "source": "modules/listings/core/titles/dsaMulti.ts",
+      "target": "src/cpis/titles/dsaMulti.ts",
+      "sourceSha256": "6644d244baec0ff033569325c27a7f11eba3e322e1e10610c9989730f7dea4c7",
+      "generatedSha256": "9168d4e5bbd98727fc29b55e2805d5f2d08a7f22cada4f39cc13b88ade093f72",
+      "declarations": [
+        "DSA",
+        "TARGET_LENGTH",
+        "dsaMultiTitle"
+      ]
+    },
+    {
+      "source": "modules/listings/core/seo.ts",
+      "target": "src/cpis/seo.ts",
+      "sourceSha256": "14fbb261a0848197bd485f7c5451c9fe5fb874566b285014d2756bc2055872e0",
+      "generatedSha256": "acee9c3dadc2d82d3d0f011c8e22d7f2a6a35c811925f9606d3c22af9135c0c4"
+    },
+    {
+      "source": "modules/pattern-library/core/colourYears.ts",
+      "target": "src/cpis/pattern/colourYears.ts",
+      "sourceSha256": "2aab11763530ac334223b04e881920f090937e983f577eec7329a5c1d0c22f00",
+      "generatedSha256": "e9712b98085567821c662ccea91a46fa8f0b402dea37ab414960b0f25d09822d",
+      "declarations": [
+        "recordedYears",
+        "yearSpans",
+        "yearRangeText"
+      ]
+    },
+    {
+      "source": "modules/pattern-library/core/factoryColour.ts",
+      "target": "src/cpis/pattern/factoryColour.ts",
+      "sourceSha256": "a338e837ec749d366f55971bdcc7767b5bfc771c405223f6e666d83aff4b1f2b",
+      "generatedSha256": "b5d480b1727fb7d6904dcc6fcc51c482d5bfc043c843d5e93cebc23031b0f9e8",
+      "declarations": [
+        "factoryYearScope"
+      ]
+    },
+    {
+      "source": "modules/listings/core/templates/premiumListingFormat.ts",
+      "target": "src/cpis/templates/premiumListingFormat.ts",
+      "sourceSha256": "27ae626e446b940eb8ead70e322093d034b136bb6b683be5404f7db8169398ca",
+      "generatedSha256": "94c31b48a76fa357eb550bd2afc60f85fb61af5675f35606567ce661b9dacbe0",
+      "declarations": [
+        "PremiumListingFormat",
+        "BOTTOMS",
+        "PREMIUM_FRONT_MULTI",
+        "PREMIUM_BOTTOMS_MULTI",
+        "premiumMultiRules",
+        "usesFrontMultiFormat"
+      ]
+    },
+    {
+      "source": "modules/listings/core/templates/types.ts",
+      "target": "src/cpis/templates/types.ts",
+      "sourceSha256": "7b1be1eb2a7f59037f0bf68ad1454dafa176e1343ae87675a2bb17017090bcba",
+      "generatedSha256": "44ff04c34ae9abcf32584f46ace546ff53089920d36c9c99582a80be834fb46a",
+      "declarations": [
+        "MultiVariationRules"
+      ]
+    },
+    {
+      "source": "modules/listings/core/foamPreparation.ts",
+      "target": "src/cpis/foamTitle.ts",
+      "sourceSha256": "040064dd820f73f223740486fc8e2c9f0ffbcda8099dd3d3c83e3a731a46aa03",
+      "generatedSha256": "f7ddad691145b6512e9ebdbb48de53077f484c66ec93cf1e2a8a853ce7e3213e",
+      "declarations": [
+        "FOAM_OPTIONS"
+      ],
+      "localDeclarations": [
+        "row",
+        "side",
+        "part",
+        "ac",
+        "position",
+        "completeIdentity",
+        "title",
+        "identity",
+        "seoTitle",
+        "seoDescription",
+        "keywords"
+      ]
+    }
+  ]
+}
