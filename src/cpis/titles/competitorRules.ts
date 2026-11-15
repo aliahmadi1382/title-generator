@@ -1,4 +1,4 @@
-// Generated from Pejmana1978/cpis @ ce26ca5c3034d4d87ede710323f6409b8fe9456e.
+// Generated from Pejmana1978/cpis @ 39b132cf92d483cd1193fc1a2a1760ce702f063a.
 // Source: modules/listings/core/titles/competitorRules.ts
 // Do not edit here. Run npm run sync:cpis to refresh the reviewed source.
 
@@ -20,7 +20,7 @@ export function competitorTitleAccounts(ids: readonly string[]): CompetitorAccou
 }
 
 const FORMATS: Record<CompetitorAccount, readonly string[]> = {
-  "us-autonation": ["year", "fitment", "vehicle", "part", "material", "product", "color", "surface"],
+  "us-autonation": ["part", "material", "surface", "product", "color", "fitment", "year", "vehicle"],
   "us-autoseatfactory": ["fitment", "year", "vehicle", "material", "part", "product", "color", "surface"],
   elite: ["color", "material", "part", "surface", "product", "fitment", "year", "vehicle"],
 };
@@ -61,7 +61,7 @@ function candidates(base: MatrixBaseInput, variation: VariationConfig, account: 
   const seatCover = plural ? "Seat Covers" : "Seat Cover";
   const cover = plural ? "Covers" : "Cover";
   const products = [seatCover, `Replacement ${seatCover}`, `Repl. ${seatCover}`, cover];
-  const fitments = account === "us-autonation" ? ["Fits", "For"] : ["For", "Fits"];
+  const fitments = account === "us-autonation" ? ["For"] : ["For", "Fits"];
   const titles = new Set<string>();
   for (const year of yearOptions) for (const part of parts) for (const surface of surfaces) {
     for (const product of products) for (const fitment of fitments) {

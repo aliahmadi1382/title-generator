@@ -47,7 +47,7 @@ test('the CPIS competitor fixture preserves recorded trim, identity and each opt
   const old = buildAccountBlocks(base, [main[2]], accounts);
   const next = buildAccountBlocks(product, [main[2]], accounts);
   const title = id => next.find(block => block.accountId === id).titles[0];
-  assert.match(title('us-autonation').title, /^2011-(2014|14) (Fits|For) Ford F150 Lariat .*Driver.*Bottom Genuine Leather .+ Tan Perf/);
+  assert.equal(title('us-autonation').title, 'Driver Bottom Genuine Leather Perf Seat Cover Tan For 2011-2014 Ford F150 Lariat');
   assert.match(title('us-autoseatfactory').title, /^(Fits|For) 2011-(2014|14) Ford F150 Lariat Genuine Leather .*Driver.*Bottom .+ Tan Perf/);
   assert.match(title('elite').title, /^Tan Genuine Leather .*Driver.*Bottom Perf.* (Fits|For) 2011-(2014|14) Ford F150 Lariat$/);
   for (const id of product.ruleOptions.competitorAccountIds) {
