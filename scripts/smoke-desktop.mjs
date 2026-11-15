@@ -98,6 +98,9 @@ try {
   assert.equal(await page.evaluate(() => localStorage.getItem('sctg.accounts.v1')), settingsBefore);
   await page.getByRole('button', { name: /^History/ }).click();
   await page.getByRole('button', { name: 'Reopen', exact: true }).click();
+  // Reopening history applies its state in a React effect after navigation.
+  // Fast CI machines can see the initial blank input before that effect runs.
+  await page.waitForFunction(() => window.document.querySelector('input[placeholder="Silverado 1500"]')?.value === 'Camry');
   assert.equal(await page.getByPlaceholder('Silverado 1500', { exact: true }).inputValue(), 'Camry');
   await page.getByRole('button', { name: /^Account Settings/ }).click();
   await page.getByRole('heading', { name: 'Account Settings', exact: true }).waitFor();
