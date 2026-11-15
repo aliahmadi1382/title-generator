@@ -25,6 +25,7 @@ import { premiumMultiRules } from '../cpis/templates/premiumListingFormat';
 import rulesManifest from '../cpis/manifest.json';
 import { downloadText } from "../lib/download";
 import { CharCount, CopyButton, Field, RiskBadge, StatusBadge } from "./ui";
+import { isTitleReady, TITLE_LIMIT_MESSAGE } from '../lib/titleLimit';
 import { Autocomplete } from "./Autocomplete";
 import {
   CATALOG_FACTORY_COLORS,
@@ -96,6 +97,7 @@ function VariationRow({ t, onEdit }: { t: MatrixTitle; onEdit: (value: string) =
       <input
         className={`vm-input${ev.valid ? "" : " over"}`}
         value={t.editedTitle}
+        maxLength={MAX_LENGTH}
         onChange={(e) => onEdit(e.target.value)}
         aria-label={t.variationName}
       />
@@ -105,6 +107,7 @@ function VariationRow({ t, onEdit }: { t: MatrixTitle; onEdit: (value: string) =
         <CharCount count={ev.characterCount} max={MAX_LENGTH} />
         <CopyButton text={t.editedTitle} />
       </span>
+      {!isTitleReady(t.editedTitle) && <span className="note-inline">{TITLE_LIMIT_MESSAGE}</span>}
       {(t.ruleMode === 'multi' || t.ruleMode === 'multi-bottoms') && <span className="note-inline">Shared parent title · {t.ruleMode === 'multi' ? 'Multi front collection' : 'Multi Bottoms'}</span>}
       {noteText && <span className="note-inline">{noteText}</span>}
     </li>
@@ -143,7 +146,7 @@ function AccountCard({
       {open && (
         <div className="vm-group-body">
           <div className="vm-group-actions">
-            <button type="button" className="link-btn" onClick={onCopy}>
+            <button type="button" className="link-btn" disabled={block.titles.some(t => !isTitleReady(t.editedTitle))} onClick={onCopy}>
               {copied ? "✓ Copied account" : "Copy all in account"}
             </button>
           </div>
@@ -338,6 +341,7 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
     });
 
   const copyAccount = async (block: AccountBlock) => {
+    if (block.titles.some(t => !isTitleReady(t.editedTitle))) return;
     await copyToClipboard(block.titles.map((t) => t.editedTitle).join("\n"));
     setCopiedAcct(block.accountId);
     window.setTimeout(() => setCopiedAcct(null), 1500);
@@ -346,7 +350,7 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
   const copyAllValidMain = async () => {
     if (!mainBlocks) return;
     const lines = mainBlocks.flatMap((b) =>
-      b.titles.filter((t) => evaluateTitle(t.editedTitle).valid).map((t) => t.editedTitle),
+      b.titles.filter((t) => isTitleReady(t.editedTitle)).map((t) => t.editedTitle),
     );
     await copyToClipboard(lines.join("\n"));
     setCopiedAll(true);
@@ -524,6 +528,7 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
       {/* ----------------- 3. Main results (by account) ----------------- */}
       {mainBlocks && (
         <section className="card" aria-label="Main variation results">
+          {mainBlocks.some(block => block.titles.some(t => !isTitleReady(t.editedTitle))) && <p className="warning" role="alert">{TITLE_LIMIT_MESSAGE}</p>}
           <div className="results-head">
             <h2 className="card-title"><span className="step-num">3</span> Review Titles — by Account</h2>
             <span className="results-count">{mainBlocks.reduce((s, b) => s + b.titles.length, 0)} titles</span>
@@ -532,7 +537,7 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
             <button type="button" className="btn btn-secondary" onClick={copyAllValidMain}>
               {copiedAll ? "✓ Copied" : "Copy All Valid (Selected Accounts)"}
             </button>
-            <button type="button" className="btn btn-secondary" onClick={() => downloadText("variation-matrix-main9.csv", buildMatrixCsv(mainBlocks, usedBase))}>
+            <button type="button" className="btn btn-secondary" disabled={mainBlocks.some(block => block.titles.some(t => !isTitleReady(t.editedTitle)))} onClick={() => downloadText("variation-matrix-main9.csv", buildMatrixCsv(mainBlocks, usedBase))}>
               Export Main 9 Titles
             </button>
             <button type="button" className="btn btn-ghost" onClick={handleSaveHistory}>
@@ -625,7 +630,7 @@ export function MatrixGenerator({ accounts, onSave, restored, onResults }: Props
             Generate Custom Variation Titles
           </button>
           {customBlocks && (
-            <button type="button" className="btn btn-secondary" onClick={() => downloadText("variation-matrix-custom.csv", buildMatrixCsv(customBlocks, usedBase))}>
+            <button type="button" className="btn btn-secondary" disabled={customBlocks.some(block => block.titles.some(t => !isTitleReady(t.editedTitle)))} onClick={() => downloadText("variation-matrix-custom.csv", buildMatrixCsv(customBlocks, usedBase))}>
               Export Custom Variation Titles
             </button>
           )}

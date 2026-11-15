@@ -20,6 +20,8 @@ export function RulesSummary({ accounts }: { accounts: AccountConfig[] }) {
           <li>Premium console lid covers and foam cushions have separate title and SEO wording.</li>
           <li>Matrix SEO reads original product facts. Manual SEO lets you review those facts before generation.</li>
           <li>Previously saved results remain unchanged. Regenerate them to apply the current rules. Account customizations are preserved.</li>
+          <li>CPIS rule updates are synchronized through GitHub and released after tests pass. Use Update in the Windows app, then Update and restart when ready.</li>
+          <li>Final titles must contain 1–80 characters. Over-limit drafts cannot be copied or exported. Review and shorten them; the generator never cuts off product facts to hide the problem.</li>
         </ul>
       </div>
 

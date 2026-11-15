@@ -70,7 +70,8 @@ jobs:
           Includes the full Title Generator: Variation Matrix, SEO, CSV conversion, History and Account Settings.
           Title and SEO rules synchronized from CPIS commit $cpisRevision.
           Includes opt-in competitor rules, Premium/DSA Multi formats and Premium console/foam titles.
-          Installed apps check this repository for updates. Save your work, then choose Restart to update.
+          CPIS rule updates sync automatically after validation. Final titles are limited to 1–80 characters for copying and export.
+          Installed apps check this repository for updates. Choose Update, then save your work and choose Update and restart.
           Settings and saved history remain on the same computer. No GitHub login is required.
 
           This build is not code-signed. Windows may show an Unknown publisher / SmartScreen notice.

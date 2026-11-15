@@ -7,6 +7,7 @@ import { premiumMultiRules, usesFrontMultiFormat } from '../cpis/templates/premi
 import { parseCsv, toCsvText } from './csv';
 import { foamTitleFacts, FOAM_OPTIONS } from '../cpis/foamTitle';
 import { evaluateTitle } from '../titleGenerator';
+import { isTitleReady, TITLE_LIMIT_MESSAGE } from './titleLimit';
 
 export { generateVariationTitle, countBlocks } from '../cpis/titles/matrix';
 
@@ -89,8 +90,12 @@ export function matrixTitleRefs(blocks: AccountBlock[], fallbackBase?: MatrixBas
 }
 
 export function buildMatrixCsv(blocks: AccountBlock[], base: MatrixBaseInput): string {
+  if (blocks.some(block => block.titles.some(title => !isTitleReady(title.editedTitle)))) throw new Error(TITLE_LIMIT_MESSAGE);
   const header = parseCsv(cpisCsv([], base))[0];
   const rows = blocks.flatMap(block => block.titles.flatMap(title =>
-    parseCsv(cpisCsv([{ ...block, titles: [title] }], title.sourceBase ?? base)).slice(1)));
+    parseCsv(cpisCsv([{ ...block, titles: [{ ...title,
+      title: isTitleReady(title.title) ? title.title : '',
+      notes: isTitleReady(title.title) ? title.notes : `${title.notes}; Original over-limit draft withheld from CSV; retained in this session.`,
+    }] }], title.sourceBase ?? base)).slice(1)));
   return toCsvText(header, rows);
 }

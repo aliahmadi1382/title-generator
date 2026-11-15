@@ -39,9 +39,9 @@ export function DesktopUpdates() {
       <strong>Desktop v{state.currentVersion}</strong>
       <span role="status">{bridgeError ? 'Update service unavailable. Try again.' : messages[state.status]}</span>
       {state.status === 'ready' ? (
-        <button type="button" className="btn btn-secondary" onClick={() => invoke(() => window.desktopUpdater!.install())}>Restart to update</button>
+        <button type="button" className="btn btn-secondary" onClick={() => invoke(() => window.desktopUpdater!.install())}>Update and restart</button>
       ) : (
-        <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => invoke(() => window.desktopUpdater!.check())}>Check for updates</button>
+        <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => invoke(() => window.desktopUpdater!.check())}>Update</button>
       )}
     </aside>
   );

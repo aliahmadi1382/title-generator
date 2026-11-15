@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
@@ -77,6 +77,18 @@ if (args.includes('--verify')) {
   });
   const manifest = JSON.stringify({ schemaVersion: 1, repository: 'Pejmana1978/cpis', commit,
     sourceCommittedAt: git('show', '-s', '--format=%cI', commit).trim(), files: generated.map(file => file.record) }, null, 2) + '\n';
+  // Unrelated CPIS commits must not create a new desktop release. Compare both
+  // the source hashes and extracted code, ignoring only its provenance header.
+  if (args.includes('--if-changed') && existsSync(manifestPath)) {
+    const previous = JSON.parse(read(manifestPath));
+    const body = text => text.replace(/^\/\/ Generated from Pejmana1978\/cpis @ [a-f0-9]{40}\./, '// CPIS source');
+    if (previous.files.length === generated.length && generated.every(({ spec, output, record }) =>
+      previous.files.some(file => file.source === spec.source && file.target === spec.target && file.sourceSha256 === record.sourceSha256)
+      && existsSync(path.join(root, spec.target)) && body(read(path.join(root, spec.target))) === body(output))) {
+      console.log('CPIS title and SEO rules have not changed; no release needed.');
+      process.exit(0);
+    }
+  }
   if (args.includes('--check')) {
     for (const { spec, output } of generated) if (read(path.join(root, spec.target)) !== output) throw new Error(`Out of sync: ${spec.target}`);
     if (read(manifestPath) !== manifest) throw new Error('The CPIS manifest is out of sync');

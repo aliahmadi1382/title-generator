@@ -15,6 +15,7 @@ import {
 } from "../lib/csv";
 import { downloadText } from "../lib/download";
 import { CharCount, CopyButton, RiskBadge, StatusBadge } from "./ui";
+import { isTitleReady, TITLE_LIMIT_MESSAGE } from '../lib/titleLimit';
 
 /** Build batch rows from parsed CSV input, generating options per account. */
 function makeBatchRows(parsed: ParsedListingRow[], accounts: AccountConfig[]): BatchRow[] {
@@ -188,10 +189,10 @@ export function BatchProcessor({ accounts, onSave, restored }: Props) {
           </div>
 
           <div className="results-actions">
-            <button type="button" className="btn btn-secondary" onClick={handleExportSelected}>
+            <button type="button" className="btn btn-secondary" disabled={rows.some(row => !isTitleReady(row.selectedTitle))} onClick={handleExportSelected}>
               Export Selected Titles
             </button>
-            <button type="button" className="btn btn-secondary" onClick={handleExportAll}>
+            <button type="button" className="btn btn-secondary" disabled={rows.some(row => row.options.some(option => !isTitleReady(option.title)))} onClick={handleExportAll}>
               Export All Account Title Options
             </button>
             <button type="button" className="btn btn-ghost" onClick={handleSaveHistory}>
@@ -225,6 +226,7 @@ export function BatchProcessor({ accounts, onSave, restored }: Props) {
                     <input
                       className={`selected-input${ev.valid ? "" : " over"}`}
                       value={row.selectedTitle}
+                      maxLength={MAX_LENGTH}
                       onChange={(e) => editSelectedTitle(row.rowId, e.target.value)}
                       placeholder="Select or edit a title"
                     />
@@ -274,6 +276,7 @@ export function BatchProcessor({ accounts, onSave, restored }: Props) {
           Upload a CSV (or load the sample) to generate per-account title options for every row.
         </p>
       )}
+      {rows.some(row => !isTitleReady(row.selectedTitle)) && <p className="warning" role="alert">{TITLE_LIMIT_MESSAGE}</p>}
     </section>
   );
 }

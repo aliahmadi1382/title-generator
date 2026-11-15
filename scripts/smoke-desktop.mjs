@@ -17,7 +17,9 @@ const launch = () => electron.launch({
 });
 let app;
 const errors = [];
+let downloadCount = 0;
 async function downloadFile(button) {
+  const destination = downloadCount++ === 0 ? downloads : await mkdtemp(path.join(downloads, 'export-'));
   await app.evaluate(({ app, session }, destination) => {
     app.smokeDownload = new Promise((resolve) => {
       session.defaultSession.once('will-download', (_event, item) => {
@@ -25,7 +27,7 @@ async function downloadFile(button) {
         item.once('done', (_doneEvent, state) => resolve(state));
       });
     });
-  }, downloads);
+  }, destination);
   await button.click();
   assert.equal(await app.evaluate(({ app }) => app.smokeDownload), 'completed');
 }

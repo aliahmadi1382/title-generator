@@ -21,9 +21,9 @@ There is no separate copy of the title rules to maintain.
 
 ## CPIS rules
 
-The title and SEO engine is synchronized from CPIS commit
-`85cb5c3f6765a7cb901018bc5f992ea021238d64`. **Rules Summary** shows the source
-revision in the app; saved sessions record the revision used to generate them.
+The title and SEO engine is synchronized automatically from CPIS.
+[`src/cpis/manifest.json`](src/cpis/manifest.json) and **Rules Summary** show
+the exact source revision; saved sessions record their generation revision.
 
 - Regular titles use CPIS account defaults, shortening and variation rules.
   DSA writes **Beige** for Tan; other accounts keep their own colour rules.
@@ -67,18 +67,29 @@ An optional `--ref <commit>` pins a reviewed revision. The sync reads committed
 Git objects, not uncommitted files. Review the source changes and test fixtures
 before pushing this repository. A changed source declaration fails extraction
 instead of silently dropping a rule. The desktop release uses the checked-in
-snapshot; it does **not** automatically read private CPIS commits. No CPIS
-credentials, database access or marketplace API is included. After a reviewed
-sync is pushed to this repository, its normal release flow updates teammates.
+snapshot. CPIS's **Sync Title Generator rules** workflow checks every push to
+CPIS main, synchronizes changed allowlisted rules, runs lint/tests/build, and
+pushes the checked snapshot here. Unrelated CPIS commits do not release another
+app version. This push triggers the Windows release, which also tests the
+packaged app. Failed or incompatible updates keep the last published version.
+
+A write deploy key is scoped to this repository; its private part is stored as
+`TITLE_GENERATOR_DEPLOY_KEY` in CPIS Actions secrets. No CPIS credentials,
+database access or marketplace API is included in the app. Rerun the sync from
+CPIS Actions after fixing a failure; manual dispatch with `refresh` also updates
+provenance when the rule bodies are unchanged.
+See [GitHub deploy keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys)
+and [workflow triggers](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 
 **Updates:** every push to `main` starts the Windows desktop release workflow.
 It runs lint, tests, the production build and an end-to-end smoke test of the
 packaged application, then publishes the installer, blockmap and `latest.yml`
 together in a GitHub release. Failed builds are not published. The desktop
 checks at launch and every four hours, downloads the latest stable release,
-and shows **Restart to update**. Save unsaved work to History or export first;
+and shows **Update and restart**. Save unsaved work to History or export first;
 installation only begins after the user confirms the restart. Offline users
-can continue working and choose **Check for updates** when connected.
+can continue working and choose **Update** when connected. Once downloaded,
+**Update and restart** asks for confirmation before installation.
 
 Settings, saved history and theme are kept in `%APPDATA%\USF Title Generator`,
 outside the installation folder, under a stable application origin. Updating
@@ -176,8 +187,16 @@ References: [Electron security](https://www.electronjs.org/docs/latest/tutorial/
 | 76–80      | Near Limit |
 | > 80       | Too Long → `risk_flag = CHECK`, note "Needs manual shortening" |
 
-Titles are never faked. If a title can't fit 80 chars without dropping
-important info, it is shown as **Too Long** and flagged for manual review.
+Final titles must contain **1–80 characters**, matching CPIS export readiness.
+If approved shortening cannot fit a title without losing product facts, the
+complete draft is held for review. Individual/account copying and CSV delivery
+are blocked until the final title is corrected. Edits are limited to 80
+characters; restored history and every CSV download are checked again.
+The original draft remains in the session and saved History. After a valid
+manual correction, an over-limit original is withheld from the CSV's
+`generated_title` audit cell, with an explanatory note; `selected_new_title`
+contains the corrected title. Original imported titles and SEO descriptions
+are source/content fields, not proposed listing titles.
 
 ---
 

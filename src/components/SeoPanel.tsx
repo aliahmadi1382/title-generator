@@ -9,6 +9,7 @@ import { buildSeoCsv, generateSeo, parseSeoFacts, type SeoFacts } from "../lib/s
 import { MAIN_VARIATIONS, CUSTOM_VARIATIONS } from '../config/variations';
 import { downloadText } from "../lib/download";
 import { CopyButton, Field } from "./ui";
+import { isTitleReady, TITLE_LIMIT_MESSAGE } from '../lib/titleLimit';
 import type { MatrixTitleRef } from "../types";
 
 interface Props {
@@ -45,7 +46,7 @@ function OutputCard({
     <div className="seo-card">
       <div className="seo-card-head">
         <span className="seo-card-title">{title}</span>
-        <CopyButton text={value} />
+        <CopyButton text={value} titleOnly={false} />
       </div>
       <textarea className="seo-textarea" rows={rows} value={value} onChange={(e) => onChange(e.target.value)} aria-label={title} />
       <div className="seo-count">{countText(value)}</div>
@@ -88,6 +89,7 @@ export function SeoPanel({ accounts, matrixTitles }: Props) {
       setWarning(source === "matrix" ? "Generate titles in the Variation Matrix first, or switch to manual." : "Enter a title.");
       return;
     }
+    if (!isTitleReady(title)) { setWarning(TITLE_LIMIT_MESSAGE); return; }
     setWarning(null);
     const facts = source === 'matrix' ? matrixForAccount[matrixIdx]?.facts : manualFacts;
     const r = generateSeo(title, selectedAccount, facts);
@@ -165,6 +167,7 @@ export function SeoPanel({ accounts, matrixTitles }: Props) {
       ) : (
         <input
           value={manualTitle}
+          maxLength={80}
           onChange={(e) => { setManualTitle(e.target.value); setManualFacts(parseSeoFacts(e.target.value)); }}
           placeholder="e.g. 2014-2020 Fits Mercedes-Benz S-Class W222 Driver Bottom Leather Prf. Cover Black"
           aria-label="Manual title"

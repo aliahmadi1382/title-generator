@@ -54,5 +54,24 @@ export async function exerciseCpis(page, downloadFile) {
   assert.equal(await page.getByRole('textbox', { name: 'Foam color', exact: true }).inputValue(), 'White');
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: 'test-results/cpis-rules.png' });
+  // An impossible title remains a review draft, with every delivery route held.
+  await page.getByPlaceholder('Silverado 1500', { exact: true }).fill('Long recorded model and chassis '.repeat(5));
+  await page.keyboard.press('Tab');
+  await page.getByRole('button', { name: 'Generate Custom Variation Titles', exact: true }).click();
+  await customs.getByRole('button', { name: /^Premium / }).click();
+  const foam = customs.getByRole('textbox', { name: 'Foam Cushion', exact: true });
+  assert.ok((await foam.inputValue()).length > 80);
+  assert.match(await foam.inputValue(), /Without A\/C$/);
+  assert.equal(await foam.getAttribute('maxlength'), '80');
+  assert.equal(await customs.getByRole('button', { name: 'Copy title', exact: true }).first().isDisabled(), true);
+  assert.equal(await customs.getByRole('button', { name: 'Copy all in account', exact: true }).isDisabled(), true);
+  const exportCustom = page.getByRole('button', { name: 'Export Custom Variation Titles', exact: true });
+  assert.equal(await exportCustom.isDisabled(), true);
+  await foam.fill('2011-2014 Fits Ford F150 Front Left Bottom Foam Cushion Without A/C');
+  await customs.getByRole('textbox', { name: 'Center Console', exact: true }).fill('2011-2014 Fits Ford F150 Leather Center Console Lid Cover Tan');
+  assert.equal(await exportCustom.isEnabled(), true);
+  await downloadFile(exportCustom);
+  assert.equal(await page.getByRole('button', { name: 'Update', exact: true }).count(), 1);
+  console.log('PASS: 80-character title gate blocks individual/account copy and export until corrected; the Update button is present.');
   console.log('PASS: CPIS competitor and Multi modes, DSA Beige, structured SEO after edits, console/foam generation, export and history restoration.');
 }

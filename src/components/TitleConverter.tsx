@@ -16,6 +16,7 @@ import {
 } from "../lib/converter";
 import { downloadText } from "../lib/download";
 import { CharCount, CopyButton, RiskBadge, StatusBadge } from "./ui";
+import { isTitleReady, TITLE_LIMIT_MESSAGE } from '../lib/titleLimit';
 
 interface Props {
   accounts: AccountConfig[];
@@ -208,6 +209,7 @@ export function TitleConverter({ accounts, onSave, restored }: Props) {
                     <input
                       className={`selected-input${ev.valid ? "" : " over"}`}
                       value={row.newTitle}
+                      maxLength={MAX_LENGTH}
                       onChange={(e) => editTitle(row.rowId, e.target.value)}
                       aria-label={`New title for item ${row.itemId}`}
                     />
@@ -227,11 +229,12 @@ export function TitleConverter({ accounts, onSave, restored }: Props) {
 
           {/* Step 5 — Download */}
           <div className="step-head"><span className="step-num">5</span> Download Outputs</div>
+          {rows.some(row => !isTitleReady(row.newTitle)) && <p className="warning" role="alert">{TITLE_LIMIT_MESSAGE}</p>}
           <div className="results-actions">
-            <button type="button" className="btn btn-secondary" onClick={downloadConverted} disabled={stats.converted === 0}>
+            <button type="button" className="btn btn-secondary" onClick={downloadConverted} disabled={stats.converted === 0 || rows.some(row => !row.needsManualCheck && !isTitleReady(row.newTitle))}>
               Download Converted Titles ({stats.converted})
             </button>
-            <button type="button" className="btn btn-danger" onClick={downloadManual} disabled={stats.manual === 0}>
+            <button type="button" className="btn btn-danger" onClick={downloadManual} disabled={stats.manual === 0 || rows.some(row => row.needsManualCheck && !isTitleReady(row.newTitle))}>
               Download Manual Check Titles ({stats.manual})
             </button>
             <button type="button" className="btn btn-ghost" onClick={handleSaveHistory}>

@@ -4,6 +4,7 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import type { RiskFlag, Status } from "../types";
+import { isTitleReady, TITLE_LIMIT_MESSAGE } from '../lib/titleLimit';
 
 const STATUS_CLASS: Record<Status, string> = {
   Good: "badge badge-good",
@@ -54,11 +55,12 @@ export function CharCount({ count, max = 80 }: { count: number; max?: number }) 
 }
 
 /** Copy-to-clipboard button with a transient "Copied" confirmation. */
-export function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
+export function CopyButton({ text, label = "Copy", titleOnly = true }: { text: string; label?: string; titleOnly?: boolean }) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | undefined>(undefined);
 
   const handleCopy = async () => {
+    if (titleOnly && !isTitleReady(text)) return;
     try {
       await navigator.clipboard.writeText(text);
     } catch {
@@ -82,7 +84,8 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
       type="button"
       className={`copy-btn${copied ? " copied" : ""}`}
       onClick={handleCopy}
-      title="Copy title"
+      disabled={titleOnly && !isTitleReady(text)}
+      title={titleOnly && !isTitleReady(text) ? TITLE_LIMIT_MESSAGE : 'Copy'}
       aria-label="Copy title"
     >
       {copied ? (
