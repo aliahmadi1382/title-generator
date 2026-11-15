@@ -15,6 +15,7 @@ import { TitleConverter } from "./components/TitleConverter";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { AccountSettings } from "./components/AccountSettings";
 import { RulesSummary } from "./components/RulesSummary";
+import { DesktopUpdates } from "./components/DesktopUpdates";
 
 type Tab = "matrix" | "seo" | "batch" | "convert" | "history" | "accounts" | "rules";
 
@@ -151,6 +152,7 @@ export default function App() {
       </header>
 
       <main className="content">
+        <DesktopUpdates />
         {/* Variation Matrix stays mounted (hidden when inactive) so its form,
             account selection, generated results, and edits persist across tab
             switches for the current session — no localStorage drafts. */}

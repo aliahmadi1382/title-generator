@@ -4,6 +4,8 @@ node_modules
 # build output
 dist
 dist-ssr
+release/
+test-results/
 *.local
 
 # env files (keep .env.example tracked)

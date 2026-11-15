@@ -1,0 +1,85 @@
+name: Windows desktop release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-desktop-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Assign an increasing desktop version
+        run: node scripts/release-version.mjs
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Package the Windows application
+        run: npm run desktop:dist
+      - name: Exercise the packaged app before publishing
+        run: |
+          $env:TITLE_GENERATOR_EXE = (Resolve-Path 'release/win-unpacked/Title Generator.exe').Path
+          npm run test:desktop
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-test-evidence
+          path: test-results/
+          if-no-files-found: ignore
+      - name: Publish the installer and update feed together
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $head = gh api 'repos/${{ github.repository }}/commits/main' --jq .sha
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($head -ne '${{ github.sha }}') {
+            Write-Output 'A newer main commit exists; its run will publish the current version.'
+            exit 0
+          }
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $tag = "v$version"
+          $existing = gh release view $tag --json isDraft --jq .isDraft 2>$null
+          $exists = $LASTEXITCODE -eq 0
+          if ($exists -and $existing -eq 'false') {
+            Write-Output "Release $tag is already published; leaving it unchanged."
+            exit 0
+          }
+          $notes = @"
+          Windows 10/11 (64-bit) installer, built from commit ${{ github.sha }} in this repository.
+
+          Includes the full Title Generator: Variation Matrix, SEO, CSV conversion, History and Account Settings.
+          Installed apps check this repository for updates. Save your work, then choose Restart to update.
+          Settings and saved history remain on the same computer. No GitHub login is required.
+
+          This build is not code-signed. Windows may show an Unknown publisher / SmartScreen notice.
+          "@
+          Set-Content -LiteralPath release-notes.txt -Value $notes -Encoding utf8
+          if (!$exists) {
+            gh release create $tag --draft --target '${{ github.sha }}' --title "Title Generator $version for Windows" --notes-file release-notes.txt
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          $assets = @(Get-ChildItem release -File | Where-Object { $_.Name -match '\.(exe|blockmap)$' -or $_.Name -eq 'latest.yml' } | ForEach-Object { $_.FullName })
+          if ($assets.Count -ne 3) { throw 'Expected one installer, its blockmap, and latest.yml' }
+          gh release upload $tag @assets --clobber
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          gh release edit $tag --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

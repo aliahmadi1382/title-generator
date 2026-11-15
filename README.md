@@ -7,6 +7,72 @@ are stored in your browser's `localStorage`.
 
 Built with **React + TypeScript + Vite**.
 
+## Windows application
+
+Download the **Title-Generator-Setup-…-x64.exe** installer from
+[the latest GitHub release](https://github.com/aliahmadi1382/title-generator/releases/latest).
+It runs on **Windows 10/11, 64-bit** without Node.js, Git, a browser server or a
+GitHub account. Share the installer or the release link with the team.
+
+The installed application contains this repository's complete interface and
+generation engine, including the Variation Matrix, custom variations, SEO,
+CSV account conversion, History and Account Settings. Generation works offline.
+There is no separate copy of the title rules to maintain.
+
+**Updates:** every push to `main` starts the Windows desktop release workflow.
+It runs lint, tests, the production build and an end-to-end smoke test of the
+packaged application, then publishes the installer, blockmap and `latest.yml`
+together in a GitHub release. Failed builds are not published. The desktop
+checks at launch and every four hours, downloads the latest stable release,
+and shows **Restart to update**. Save unsaved work to History or export first;
+installation only begins after the user confirms the restart. Offline users
+can continue working and choose **Check for updates** when connected.
+
+Settings, saved history and theme are kept in `%APPDATA%\USF Title Generator`,
+outside the installation folder, under a stable application origin. Updating
+does not clear them. Each teammate has their own local data; browser history
+from the Vercel website is separate and is not imported automatically. Saved
+account customizations also remain; new default account settings are available
+through the existing reset-to-defaults control (which replaces custom settings).
+
+The installer is currently **not code-signed**. Windows may show an Unknown
+publisher / SmartScreen notice; distribute the exact file from the release
+linked above. Corporate Windows policies may require a signed installer.
+
+### Building and maintaining the desktop app
+
+```bash
+npm ci
+npm run lint
+npm test
+npm run build
+npm run desktop:dist
+npm run test:desktop
+```
+
+`desktop:dist` packages the existing production `dist/` into an NSIS installer
+under `release/`. `npm run desktop` builds and opens a local preview (updating
+is disabled for previews). To smoke-test the packaged executable, set
+`TITLE_GENERATOR_EXE` to the absolute path of
+`release/win-unpacked/Title Generator.exe` before running `test:desktop`.
+Smoke tests use a separate temporary profile and synthetic data.
+
+The release workflow derives a unique version from the base `package.json`
+version plus its GitHub run number, without committing a version bump back to
+the repository. Keep the base version stable for a release series and bump
+its minor or major number when starting a new series. A rerun never overwrites
+an already published release. A partial draft can be retried, and an older
+commit cannot replace a release built from the current `main`. The workflow
+uses GitHub's scoped `GITHUB_TOKEN`; no personal token is shipped in the app.
+
+Desktop entry points live in `desktop/`; the only addition to the existing web
+interface is an update bar, visible only in the desktop app. Renderer Node.js
+access is disabled, context isolation and sandboxing are enabled, and a custom
+local protocol serves only built UI assets with a restrictive CSP.
+
+References: [Electron security](https://www.electronjs.org/docs/latest/tutorial/security),
+[electron-builder v26 updates](https://www.electron.build/v26/docs/features/auto-update/).
+
 ---
 
 ## What it does

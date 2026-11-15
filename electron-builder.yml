@@ -1,0 +1,32 @@
+appId: com.unitedseatfactory.titlegenerator
+productName: Title Generator
+copyright: Copyright © United Seat Factory
+asar: true
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**/*
+  - desktop/**/*.cjs
+  - build/icon.png
+  - package.json
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  artifactName: Title-Generator-Setup-${version}-${arch}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Title Generator
+  deleteAppDataOnUninstall: false
+publish:
+  provider: github
+  owner: aliahmadi1382
+  repo: title-generator
+  releaseType: release
