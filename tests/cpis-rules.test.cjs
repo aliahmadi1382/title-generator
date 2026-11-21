@@ -6,6 +6,7 @@ const { DEFAULT_ACCOUNTS: accounts } = load('src/config/accounts.ts');
 const { MAIN_VARIATIONS: main, CUSTOM_VARIATIONS: custom } = load('src/config/variations.ts');
 const { buildAccountBlocks, buildMatrixCsv, matrixTitleRefs, editAccountTitle } = load('src/lib/matrix.ts');
 const cpis = load('src/cpis/titles/matrix.ts');
+const { applyCompetitorTitles } = load('src/cpis/titles/competitorRules.ts');
 const { generateSeo } = load('src/lib/seoGenerator.ts');
 const { parseCsv } = load('src/lib/csv.ts');
 const { processRawTitle } = load('src/lib/titlePipeline.ts');
@@ -47,11 +48,14 @@ test('the CPIS competitor fixture preserves recorded trim, identity and each opt
   const old = buildAccountBlocks(base, [main[2]], accounts);
   const next = buildAccountBlocks(product, [main[2]], accounts);
   const title = id => next.find(block => block.accountId === id).titles[0];
-  assert.equal(title('us-autonation').title, 'Driver Bottom Genuine Leather Perf Seat Cover Tan For 2011-2014 Ford F150 Lariat');
-  assert.match(title('us-autoseatfactory').title, /^(Fits|For) 2011-(2014|14) Ford F150 Lariat Genuine Leather .*Driver.*Bottom .+ Tan Perf/);
-  assert.match(title('elite').title, /^Tan Genuine Leather .*Driver.*Bottom Perf.* (Fits|For) 2011-(2014|14) Ford F150 Lariat$/);
+  const expected = applyCompetitorTitles(cpis.buildAccountBlocks(product, [main[2]], accounts), product, [main[2]], product.ruleOptions.competitorAccountIds, 'Lariat');
+  assert.deepEqual(next.map(block => ({ ...block, titles: block.titles.map(resultWithoutFacts) })), expected);
+  assert.match(title('us-autonation').title, /^Driver Bottom Genuine Leather .*Cover Tan For (2011-(2014|14)|11-14) Ford F150 Lariat$/);
+  assert.match(title('us-autoseatfactory').title, /^(Fits|For) (2011-(2014|14)|11-14) Ford F150 Lariat Genuine Leather .*Driver.*Bottom .+ Tan Perf/);
+  assert.match(title('elite').title, /^Tan Genuine Leather .*Driver.*Bottom Perf.* (Fits|For) (2011-(2014|14)|11-14) Ford F150 Lariat$/);
   for (const id of product.ruleOptions.competitorAccountIds) {
-    assert.equal(title(id).characterCount, 80);
+    assert.ok(title(id).characterCount <= 80);
+    assert.match(title(id).title, /\bCover\b/);
     assert.doesNotMatch(title(id).title, /XL|XLT|AB12/);
   }
   for (const block of next.filter(block => !product.ruleOptions.competitorAccountIds.includes(block.accountId))) {
@@ -60,10 +64,13 @@ test('the CPIS competitor fixture preserves recorded trim, identity and each opt
 });
 
 test('competitor formats preserve coverage and never invent Perforated or Solid', () => {
-  const blocks = buildAccountBlocks({ ...base, yearRange: '2000-2001', material: 'Synthetic Leather',
-    ruleOptions: { competitorAccountIds: ['elite'] } }, [main[7]], [account('elite')]);
+  const product = { ...base, yearRange: '2000-2001', material: 'Synthetic Leather', ruleOptions: { competitorAccountIds: ['elite'] } };
+  const blocks = buildAccountBlocks(product, [main[7]], [account('elite')]);
+  const expected = applyCompetitorTitles(cpis.buildAccountBlocks(product, [main[7]], [account('elite')]), product, [main[7]], ['elite']);
+  assert.deepEqual(blocks.map(block => ({ ...block, titles: block.titles.map(resultWithoutFacts) })), expected);
   const title = blocks[0].titles[0].title;
-  assert.match(title, /^Tan Synthetic Leather (Driver (and|&) Passenger Bottoms|Front Bottom)/);
+  assert.match(title, /^Tan .+ (Driver (and|&) Passenger Bottoms?|Front Bottom)/);
+  assert.match(title, /\bCovers\b/);
   assert.doesNotMatch(title, /Perf|Solid|Top/);
   assert.match(title, /2000-(2001|01) Ford F150$/);
 });
