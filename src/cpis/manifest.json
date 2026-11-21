@@ -1,80 +1,80 @@
 {
   "schemaVersion": 1,
   "repository": "Pejmana1978/cpis",
-  "commit": "0587b1246b5bf69c6caa9b379ca9f3738cf0b79b",
-  "sourceCommittedAt": "2026-11-20T20:37:47+03:30",
+  "commit": "b5137d518f9134d410b5d13d244ce19b0bd420fc",
+  "sourceCommittedAt": "2026-11-21T17:02:05+03:30",
   "files": [
     {
       "source": "modules/listings/core/titles/types.ts",
       "target": "src/cpis/titles/types.ts",
       "sourceSha256": "4d8d4d8108f76fea22f11ff2ef9acfa62706ff58339e9546b837000d8f39a170",
-      "generatedSha256": "42f83181e89276057b6be4b987b0c7d9dbd8a594f5fad73cac326ac8c73af008"
+      "generatedSha256": "bde4c653950748a57a9d27d9c67e1eb89cf14279c4cd8d70e14c0f93ec697fb6"
     },
     {
       "source": "modules/listings/core/titles/titleGenerator.ts",
       "target": "src/cpis/titles/titleGenerator.ts",
-      "sourceSha256": "014d6e46a8f43c43cdb519a22d8b2383c4b926ad0b8f8ed649a9c615c45c84db",
-      "generatedSha256": "45089795723edb222852dedc33d559602fc32d0178334f84a1bd8fe01a78640e"
+      "sourceSha256": "7b9d69bca0d947d30b3db85d584a09ca934a7d767a990d226a927a8bea34e08a",
+      "generatedSha256": "28e4a7e3ba8468c82fdf313dfc93f453aa8823a7d80098145f856509f15e7011"
     },
     {
       "source": "modules/listings/core/titles/accounts.ts",
       "target": "src/cpis/titles/accounts.ts",
       "sourceSha256": "a818c3d735d280d16654393779b13f43702291ea5ae3e969ec371d7815b18c35",
-      "generatedSha256": "6b0cb20d5fb963f52d5cd164e8a56b1a19bbf1b52b85f3b454fbc523a068f192"
+      "generatedSha256": "3461aff1d78450f80f925d4b2a1c37456761b113212df42086353f4c30c4a894"
     },
     {
       "source": "modules/listings/core/titles/variations.ts",
       "target": "src/cpis/titles/variations.ts",
       "sourceSha256": "b0c130f11c6344d5d07dbe45489202648560eaec74a93928b56c20327bdf7520",
-      "generatedSha256": "ffb2ae4fedff695134264c5fc28b53c9a4b4b3d04f6d8415231c04e619ae14c5"
+      "generatedSha256": "cb73489b9ab88d1c0a0802d0080c5fe544f380160794f583117cacd4b8c1f2ce"
     },
     {
       "source": "modules/listings/core/titles/variationPhraseStages.ts",
       "target": "src/cpis/titles/variationPhraseStages.ts",
-      "sourceSha256": "7edc7ac73a8811a7c9e632416eae7e4c7b66e1192a80e041efb9f2cb1ab8ca7b",
-      "generatedSha256": "620fac35bfbb33642d7b0a1503df6a652681d8450fed4ff19fe99fb1c17f3c75"
+      "sourceSha256": "f6bc35943245b56da0e2619a983ecb1c1a253983b00a77550cab5380b56c884c",
+      "generatedSha256": "f16265d79d2b501e70b58d9b4ced22ee0fb4c2bde3427bcf3cf68f35800a9f5f"
     },
     {
       "source": "modules/listings/core/titles/uniqueness.ts",
       "target": "src/cpis/titles/uniqueness.ts",
       "sourceSha256": "b0d52f1f60a1640e4d1ec1dd39bda2ea5775381caf554211b48f12ad5ed7b855",
-      "generatedSha256": "a4d6cd0c42b6e74b523ccf9f7a823335ae8024cc2a4c2ca576820b61c9f0c1af"
+      "generatedSha256": "1c2b9f9e5022e56f3eba8412a2cc32c5f5b5ded84579eb02bf138dc12fdc1b38"
     },
     {
       "source": "modules/listings/core/titles/matrix.ts",
       "target": "src/cpis/titles/matrix.ts",
-      "sourceSha256": "2962c2cac37a433fe94919333082ce9aa2ad73d1958c4333ddc1a8b55e7160d7",
-      "generatedSha256": "053a76db778644bc71c9e0bf8ff84de085d9717c4922f1ab185585ba8a7e5cda"
+      "sourceSha256": "247906d5e37f8af69aa9751fa99397b8f298ae7fbecf2dbbb2274e530ad7a6e7",
+      "generatedSha256": "dfcbf53ea3031128e0ba39fa9286031296c3aa0a4ebbbd87e7337bd8ae97380b"
     },
     {
       "source": "modules/listings/core/titles/csv.ts",
       "target": "src/cpis/titles/csv.ts",
       "sourceSha256": "f5576394cae43fd85979add2a4c5f5a61038ccfec2e6949b9cdfa41d6290dfa1",
-      "generatedSha256": "7e82677b80428bf5909417d30fd8286750491c03aa8035268d992721d8f7c65b"
+      "generatedSha256": "0ce476a566387258027caf0262e2f8a1fa6ef72e47a9e79c42e98443f0c0490e"
     },
     {
       "source": "modules/listings/core/titles/catalogLookup.ts",
       "target": "src/cpis/titles/catalogLookup.ts",
       "sourceSha256": "61870880372e274b6ecc87f3ffab500aad4515bbf3514e5efcce447b460c4b4d",
-      "generatedSha256": "cf10feaf1932af34806dc7f52d9471246bad02294562a80e186525fc733be0a5"
+      "generatedSha256": "4a2cbbe85a32065aafb9f2923bb14769e5fafa78ce055cc6e20e95c1407b6a82"
     },
     {
       "source": "modules/listings/core/titles/catalogData.ts",
       "target": "src/cpis/titles/catalogData.ts",
       "sourceSha256": "88b690d9cd3ed357e55b92b4c9abd552dd2663503c52fb9d9955937c4d3a7019",
-      "generatedSha256": "8b4af2852a4f129d6774efa5e94b151d081c000e90fa694d4afaff9adc9bbfa5"
+      "generatedSha256": "b66c75f5dea2478822ca7348324485f24d2f018a1d5510c1132b17116a8b420e"
     },
     {
       "source": "modules/listings/core/titles/competitorRules.ts",
       "target": "src/cpis/titles/competitorRules.ts",
-      "sourceSha256": "0d10c06831632824098e52fdb6ad00d6fd9d0dd354e1a13836a6c6b169a2271f",
-      "generatedSha256": "4d7c8d58b9a5a03a08fca8af43b93a6735cb775a0eb40d0eb1a6373ce75c853b"
+      "sourceSha256": "b2ab63b0d997946b6567429366e26bdc8ec9d29853917700a9388e578231ff98",
+      "generatedSha256": "ad8de3016579d00cf4b8f9bb70e57990b538015868510520926b743e2877ad64"
     },
     {
       "source": "modules/listings/core/productFactWording.ts",
       "target": "src/cpis/productFactWording.ts",
       "sourceSha256": "af056681ed1f4b339ffdb40cc40d70ceb72d5c63e07eaf542dbe5c8943e23824",
-      "generatedSha256": "ab6d6530ecb604ef6fdc19500d8ee3b73b69e3f6cd909fbff0e3865dbf7ac60e",
+      "generatedSha256": "ed1dc6f7ce1b9b0e1f05853b33aeb6497f281acf85df4cad07f92f3fd1f1badb",
       "declarations": [
         "MATERIALS",
         "listingMaterialWording",
@@ -84,8 +84,8 @@
     {
       "source": "modules/listings/core/titles/premiumMulti.ts",
       "target": "src/cpis/titles/premiumMulti.ts",
-      "sourceSha256": "571a71f40ea4cfb688a306f04131ab5e23d1189375dc7bbf78a823e5e25250ed",
-      "generatedSha256": "e6245efb00853181be7fd74ccb2874d6532066dbf148aebfa960728c4fea2d91",
+      "sourceSha256": "c0eea1e60ef7fd7712a12baeb71f74a88e5295aaa173031546854b76457e0337",
+      "generatedSha256": "096d05cbcd8f47170c6b55db81c724f5026ccf8c5c95663594d416e808d5106e",
       "declarations": [
         "PREMIUM",
         "PREMIUM_MULTI_TITLE_ID",
@@ -96,8 +96,8 @@
     {
       "source": "modules/listings/core/titles/dsaMulti.ts",
       "target": "src/cpis/titles/dsaMulti.ts",
-      "sourceSha256": "6644d244baec0ff033569325c27a7f11eba3e322e1e10610c9989730f7dea4c7",
-      "generatedSha256": "4b182f19572f7d808e0648cc74b8fe47e86ab89aa6088a1a2c29783afe502061",
+      "sourceSha256": "291ea40e2c5e8dcd392e1c58b2f2e26ca2630e3ea90a5d48b80112bbfcc00229",
+      "generatedSha256": "b8261ec6fb2043d63ea45a2377c481e338952402a49ca61be80789916e9b8942",
       "declarations": [
         "DSA",
         "TARGET_LENGTH",
@@ -108,13 +108,13 @@
       "source": "modules/listings/core/seo.ts",
       "target": "src/cpis/seo.ts",
       "sourceSha256": "14fbb261a0848197bd485f7c5451c9fe5fb874566b285014d2756bc2055872e0",
-      "generatedSha256": "8e610ab9cb0dcf23f7f5c4598b8ea7fa9232207d458ac69a89fe18fee61d298d"
+      "generatedSha256": "15fdfe5fa12d365cdfa9f72b068226309feba53f820fd2ff355243f0efa365d4"
     },
     {
       "source": "modules/pattern-library/core/colourYears.ts",
       "target": "src/cpis/pattern/colourYears.ts",
       "sourceSha256": "2aab11763530ac334223b04e881920f090937e983f577eec7329a5c1d0c22f00",
-      "generatedSha256": "00d106e8f774beaefd99b8f16e0c3fba5ce6dba0049c99fa177997fc8bea5112",
+      "generatedSha256": "7b2e2326d0add5a9f6ecbf2a842f6838534fc089c651d9d140a7f2e3494df257",
       "declarations": [
         "recordedYears",
         "yearSpans",
@@ -125,7 +125,7 @@
       "source": "modules/pattern-library/core/factoryColour.ts",
       "target": "src/cpis/pattern/factoryColour.ts",
       "sourceSha256": "a338e837ec749d366f55971bdcc7767b5bfc771c405223f6e666d83aff4b1f2b",
-      "generatedSha256": "ea9dfad41b4854aaf2385d14e31bada232628648f0315ac57aff7b671a5b97fe",
+      "generatedSha256": "39b501a22ebb5d9396d81bc9c9055fc7340bb66d616875b55224a5f35764ddc5",
       "declarations": [
         "factoryYearScope"
       ]
@@ -134,7 +134,7 @@
       "source": "modules/listings/core/templates/premiumListingFormat.ts",
       "target": "src/cpis/templates/premiumListingFormat.ts",
       "sourceSha256": "dc33a98aa590d72ed5b8c57aa2ef0574fc70c166b45665e5c5bcada042592f85",
-      "generatedSha256": "58a1e7e5c16ab4005aac376cdd080053793c97ae2131a8fa56bd9f3ccfb83af0",
+      "generatedSha256": "58c39a17d533487b3b2a4a95c34b875261e9bac83a95200d85c978c45a9a87b1",
       "declarations": [
         "PremiumListingFormat",
         "BOTTOMS",
@@ -148,7 +148,7 @@
       "source": "modules/listings/core/templates/types.ts",
       "target": "src/cpis/templates/types.ts",
       "sourceSha256": "7b1be1eb2a7f59037f0bf68ad1454dafa176e1343ae87675a2bb17017090bcba",
-      "generatedSha256": "e6e82965d6baed58622ed539fd6f0e8c6a52699f90659090035003650a4b45e5",
+      "generatedSha256": "8d39ef7fd8597a8aefdac55c4d5ffb63a5f93b1cc53dc4e26fcbf149d4fc0d80",
       "declarations": [
         "MultiVariationRules"
       ]
@@ -157,7 +157,7 @@
       "source": "modules/listings/core/foamPreparation.ts",
       "target": "src/cpis/foamTitle.ts",
       "sourceSha256": "040064dd820f73f223740486fc8e2c9f0ffbcda8099dd3d3c83e3a731a46aa03",
-      "generatedSha256": "4c08d7baf1c40fe257e91254b383d6271b8639a64fc9a2c3856a665e6fc037a2",
+      "generatedSha256": "4c9684e68d87af91bdcf63647171aa7054df0d2dbb6bfbd0f0c9d9eb3ba8b10e",
       "declarations": [
         "FOAM_OPTIONS"
       ],

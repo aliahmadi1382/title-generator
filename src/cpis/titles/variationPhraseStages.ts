@@ -1,4 +1,4 @@
-// Generated from Pejmana1978/cpis @ 0587b1246b5bf69c6caa9b379ca9f3738cf0b79b.
+// Generated from Pejmana1978/cpis @ b5137d518f9134d410b5d13d244ce19b0bd420fc.
 // Source: modules/listings/core/titles/variationPhraseStages.ts
 // Do not edit here. Run npm run sync:cpis to refresh the reviewed source.
 
@@ -130,9 +130,8 @@ export const MAIN_VARIATION_PHRASE_STAGES: Record<string, string[]> = {
     "Front Bottom Covers",
   ],
   // 9. Driver & Passenger Top & Bottom (full front-cover variation).
-  // Full 16-stage ladder: "&" forms -> slash Top/Bottom -> slash Top/Lower ->
-  // Front forms -> "Front Seats" (last resort). "Front Seats" is accurate ONLY
-  // here because this variation covers Driver AND Passenger, Top AND Bottom.
+  // Owner's ordered full-seat ladder: & forms -> slash Top/Bottom -> Front.
+  // Front Covers is the final fallback; the product is never called seats.
   m9: [
     "Driver & Passenger Top & Bottom Replacement Seat Covers",
     "Driver & Passenger Top & Bottom Replacement Covers",
@@ -142,13 +141,9 @@ export const MAIN_VARIATION_PHRASE_STAGES: Record<string, string[]> = {
     "Driver/Passenger Top/Bottom Replacement Covers",
     "Driver/Passenger Top/Bottom Seat Covers",
     "Driver/Passenger Top/Bottom Covers",
-    "Driver/Passenger Top/Lower Replacement Seat Covers",
-    "Driver/Passenger Top/Lower Replacement Covers",
-    "Driver/Passenger Top/Lower Seat Covers",
-    "Driver/Passenger Top/Lower Covers",
     "Front Replacement Seat Covers",
     "Front Replacement Covers",
     "Front Seat Covers",
-    "Front Seats",
+    "Front Covers",
   ],
 };

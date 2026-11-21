@@ -1,4 +1,4 @@
-// Generated from Pejmana1978/cpis @ 0587b1246b5bf69c6caa9b379ca9f3738cf0b79b.
+// Generated from Pejmana1978/cpis @ b5137d518f9134d410b5d13d244ce19b0bd420fc.
 // Source: modules/listings/core/titles/matrix.ts
 // Do not edit here. Run npm run sync:cpis to refresh the reviewed source.
 
@@ -25,7 +25,7 @@ import type {
   ProductWording,
   VariationConfig,
 } from "./types";
-import { generateForAccount, generateWithPhraseStages, getStatus } from "./titleGenerator";
+import { generateForAccount, generateWithPhraseStages, getStatus, titleMaterialStages } from "./titleGenerator";
 import { compareTitles } from "./uniqueness";
 import { toCsvText } from "./csv";
 
@@ -139,7 +139,7 @@ function productVariantTitle(
 /**
  * Regenerate a MAIN (phrase-stage) variation title starting from a LATER phrase
  * stage. Staying inside generateWithPhraseStages keeps the whole approved
- * ladder — including the Front Seat Covers / Front Seats fallback — so an
+ * ladder — including the Front Seat Covers / Front Covers fallback — so an
  * alternate can never stall at an overlong "Driver/Passenger Top/Lower" form
  * the way the raw-label path could.
  */
@@ -171,12 +171,7 @@ function alternateTitles(
   account: AccountConfig,
 ): MatrixTitle[] {
   if (variation.phraseStages && variation.phraseStages.length > 1) {
-    // Effective ladder: with an Additional Variation the bare "Front Seats"
-    // stage is not accurate, so alternates are sliced from the filtered list
-    // (never producing an empty or Front-Seats-only stage list).
-    const ladder = base.additionalVariation.trim()
-      ? variation.phraseStages.filter((p) => p !== "Front Seats")
-      : variation.phraseStages;
+    const ladder = variation.phraseStages.map(phrase => phrase === "Front Seats" ? "Front Covers" : phrase);
     return [
       ...ladder.slice(1).map((_, i) => phraseVariantTitle(base, variation, account, ladder.slice(i + 1))),
       ...PRODUCT_VARIANTS.map((pw) => productVariantTitle(base, variation, account, pw)).filter((c) => c.valid),
@@ -213,9 +208,10 @@ function dedupeAcrossAccounts(
       if (conflict) {
         // Try approved alternates (later phrase stages for main variations,
         // product wordings for custom ones). Prefer an alternate that both
-        // fits 80 chars AND is unique; failing that, accept a unique one that
-        // is over the limit (it keeps all data and is flagged by length).
-        const candidates = alternateTitles(base, variation, account);
+        // fits 80 chars AND is unique. Never turn a valid title into an
+        // overlong one merely to avoid similarity with another account.
+        const keepLeatherette = t.valid && titleMaterialStages(base.material).length > 1 && /\bLeatherette\b/.test(t.title);
+        const candidates = alternateTitles(base, variation, account).filter(candidate => !keepLeatherette || /\bLeatherette\b/.test(candidate.title));
         const clashes = (title: string) =>
           accepted.some((a) => {
             const r = compareTitles(a, title);
@@ -223,7 +219,7 @@ function dedupeAcrossAccounts(
           });
         const fixed =
           candidates.find((c) => c.valid && !clashes(c.editedTitle)) ??
-          candidates.find((c) => !clashes(c.editedTitle));
+          (!t.valid ? candidates.find((c) => !clashes(c.editedTitle)) : undefined);
 
         if (fixed) {
           t = { ...fixed, notes: appendNote(fixed.notes, "Duplicate avoided with alternate account pattern") };

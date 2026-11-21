@@ -1,4 +1,4 @@
-// Generated from Pejmana1978/cpis @ 0587b1246b5bf69c6caa9b379ca9f3738cf0b79b.
+// Generated from Pejmana1978/cpis @ b5137d518f9134d410b5d13d244ce19b0bd420fc.
 // Source: modules/listings/core/titles/titleGenerator.ts
 // Do not edit here. Run npm run sync:cpis to refresh the reviewed source.
 
@@ -74,11 +74,13 @@ function build(parts: string[]): string {
 //   Passenger -> Pass/Pass./Psgr (forbidden)
 //   Bottom  -> Btm             (forbidden)
 //   Leather -> Lthr./Lthr/Leath. (forbidden — see MATERIAL PROTECTION below)
-//   Leatherette -> any short form (forbidden)
+//   Leatherette -> Vinyl is the only approved material fallback, after trying
+//   the complete shortening ladder with Leatherette first.
 //   Leatherette/Vinyl/Cloth/Suede/MB-Tex are never turned into "Leather".
 //
-// MATERIAL PROTECTION: "Leather" and "Leatherette" are protected material words.
-// They are ALWAYS written in full and are never abbreviated or removed by any
+// MATERIAL PROTECTION: Leather is never abbreviated or removed. Vinyl and
+// Synthetic Leather aliases use Leatherette first, then Vinyl only if needed.
+// Neither material may be removed or reduced to genuine Leather by any
 // generation path (matrix, phrase stages, custom variations, CSV converter, and
 // cross-account uniqueness regeneration all share these rule sets). An over-80
 // title carrying the correct material is preferred over a shorter one that
@@ -530,14 +532,38 @@ function accountTitleColour(color: string, accountId: string) {
   return { color: british, note: british === normalized.color ? normalized.note : "Used Beige for DSA" };
 }
 
+/** Title-only aliases. Keep stored material, description and SEO facts intact. */
+export function titleMaterialStages(material: string): string[] {
+  const preferred = material.replace(/\b(?:synthetic\s+leather|vinyl|leatherette)(?:\s*\/\s*(?:vinyl|leatherette))?\b/gi, "Leatherette");
+  const compact = preferred.replace(/\bLeatherette\b/g, "Vinyl");
+  return preferred === compact ? [preferred] : [preferred, compact];
+}
+
+function withTitleMaterial(listing: ListingInput, generate: (input: ListingInput) => GeneratedTitle): GeneratedTitle {
+  let result: GeneratedTitle | undefined;
+  for (const [index, material] of titleMaterialStages(listing.material).entries()) {
+    result = generate({ ...listing, material });
+    const note = index > 0 ? "Leatherette changed to Vinyl after approved shortening" : material !== listing.material ? "Used Leatherette for title material" : "";
+    if (note) result = { ...result, notes: [result.notes, note].filter(Boolean).join("; ") };
+    if (result.valid) return result;
+  }
+  return result!;
+}
+
 /** Generate the single title an account produces for a listing. */
 export function generateForAccount(listing: ListingInput, account: AccountConfig): GeneratedTitle {
+  return withTitleMaterial(listing, input => generateForMaterial(input, account));
+}
+
+function generateForMaterial(listing: ListingInput, account: AccountConfig): GeneratedTitle {
   const baseFit: FitmentWord = account.preferredFitmentWord || listing.fitment;
   const baseProduct: string = account.preferredProductWording || listing.productType;
   const colorNorm = accountTitleColour(listing.color, account.id);
   const wl: ListingInput = { ...listing, color: colorNorm.color };
   // Guarantee the Additional Variation slot exists for this account when needed.
-  const eaccount: AccountConfig = { ...account, titleStructure: ensureVariationToken(account.titleStructure, wl) };
+  const structure = ensureVariationToken(account.titleStructure, wl);
+  const eaccount: AccountConfig = { ...account, titleStructure: /\bCovers?\b/i.test(baseProduct)
+    && !structure.includes("productType") && !/\bCovers?\b/i.test(wl.position) ? [...structure, "productType"] : structure };
   const r = runPipeline(
     wl,
     eaccount,
@@ -608,6 +634,10 @@ export function generateWithPhraseStages(
   account: AccountConfig,
   phraseStages: string[],
 ): GeneratedTitle {
+  return withTitleMaterial(listing, input => generatePhrasesForMaterial(input, account, phraseStages));
+}
+
+function generatePhrasesForMaterial(listing: ListingInput, account: AccountConfig, phraseStages: string[]): GeneratedTitle {
   const baseFit: FitmentWord = account.preferredFitmentWord || listing.fitment;
   const colorNorm = accountTitleColour(listing.color, account.id);
   const baseListing: ListingInput = { ...listing, color: colorNorm.color };
@@ -615,16 +645,8 @@ export function generateWithPhraseStages(
   const eaccount: AccountConfig = { ...account, titleStructure: ensureVariationToken(account.titleStructure, baseListing) };
   const rules = withColorReduction(PHRASE_ABBREVIATIONS, baseListing.color, visualColorFor(baseListing.color));
 
-  // The bare "Front Seats" last resort is only accurate when the product is the
-  // plain full-front coverage. An Additional Variation (Headrest, Armrest, …)
-  // changes the coverage, so that stage is skipped — "Front Seat Covers" stays
-  // the floor and the variation token is preserved as usual. If a caller passed
-  // ONLY that stage (degenerate slice), keep the original list rather than
-  // running with no stages at all.
-  const filtered = baseListing.variation.trim()
-    ? phraseStages.filter((p) => p !== "Front Seats")
-    : phraseStages;
-  const stages = filtered.length > 0 ? filtered : phraseStages;
+  // Old callers may still send Front Seats. Never drop the cover identity.
+  const stages = phraseStages.map(phrase => phrase === "Front Seats" ? "Front Covers" : phrase);
 
   let chosen: PipelineResult | null = null;
   let chosenPhrase = "";
@@ -657,7 +679,7 @@ export function generateWithPhraseStages(
   // "Front …" phrases without Top/Bottom exist only in the FULL front variation
   // (Driver & Passenger, Top & Bottom) ladder, so this note is accurate there
   // and never fires for driver-only / tops-only / bottoms-only / rear stages.
-  if (/^Front\b/.test(chosenPhrase) && !/\b(?:Top|Bottom)\b/.test(chosenPhrase)) notes.push("Used Front Seats fallback");
+  if (/^Front\b/.test(chosenPhrase) && !/\b(?:Top|Bottom)\b/.test(chosenPhrase)) notes.push("Used front-cover fallback");
   else if (/\bFront\b/.test(chosenPhrase)) notes.push("Used front fallback");
   else if (/\bSide\b/.test(chosenPhrase)) notes.push("Used side fallback");
   if (r.fitmentChanged) notes.push("Fits changed to For");

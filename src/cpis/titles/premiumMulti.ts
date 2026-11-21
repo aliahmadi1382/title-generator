@@ -1,4 +1,4 @@
-// Generated from Pejmana1978/cpis @ 0587b1246b5bf69c6caa9b379ca9f3738cf0b79b.
+// Generated from Pejmana1978/cpis @ b5137d518f9134d410b5d13d244ce19b0bd420fc.
 // Source: modules/listings/core/titles/premiumMulti.ts
 // Do not edit here. Run npm run sync:cpis to refresh the reviewed source.
 
@@ -17,6 +17,6 @@ export const PREMIUM_BOTTOMS_MULTI_TITLE_ID = "multi-front-bottoms";
 export function premiumMultiTitle(base: MatrixBaseInput, bottomsOnly = false): GeneratedTitle {
   const position = bottomsOnly ? "Front Bottom Seat Covers" : "Front Seat Covers";
   const generated = generateWithPhraseStages({ ...base, position, variation: base.additionalVariation }, PREMIUM,
-    bottomsOnly ? [position, "Front Bottom Covers"] : [position]);
-  return { ...generated, notes: generated.notes.replace("Used Front Seats fallback", "Front seat-cover collection") };
+    bottomsOnly ? [position, "Front Bottom Covers"] : [position, "Front Covers"]);
+  return { ...generated, notes: generated.notes.replace("Used front-cover fallback", "Front seat-cover collection") };
 }
