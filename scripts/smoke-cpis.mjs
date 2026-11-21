@@ -72,6 +72,28 @@ export async function exerciseCpis(page, downloadFile) {
   assert.equal(await exportCustom.isEnabled(), true);
   await downloadFile(exportCustom);
   assert.equal(await page.getByRole('button', { name: 'Update', exact: true }).count(), 1);
+  // Exercise the owner's new material/cover fallback in the actual desktop UI.
+  for (const [placeholder, value] of [['Chevy', 'Land Rover'], ['Silverado 1500', 'Range Rover Sport Supercharged'], ['Genuine Leather', 'Vinyl']]) {
+    await page.getByPlaceholder(placeholder, { exact: true }).fill(value);
+    await page.keyboard.press('Tab');
+  }
+  await page.getByRole('textbox', { name: 'Recorded trim', exact: true }).fill('');
+  await page.getByRole('button', { name: 'Generate Selected Formats', exact: true }).click();
+  await page.getByRole('button', { name: 'Expand All', exact: true }).click();
+  const frontCover = await rows('Premium').first().inputValue();
+  assert.match(frontCover, /Leatherette Front Covers$/);
+  assert.ok(frontCover.length <= 80);
+  const competitor = await rows('U.S.AutoNation').evaluateAll(elements => elements.map(element => element.value));
+  assert.equal(competitor.length, 9);
+  for (const title of competitor) {
+    assert.match(title, /\bCovers?\b/);
+    assert.doesNotMatch(title, /Synthetic Leather|Front Seats/);
+  }
+  await rows('Premium').first().scrollIntoViewIfNeeded();
+  await page.screenshot({ path: 'test-results/owner-title-wording.png' });
+  await page.getByRole('button', { name: 'Rules Summary', exact: true }).click();
+  assert.equal(await page.getByText(/For Vinyl\/Leatherette, including legacy/).count(), 1);
+  console.log('PASS: desktop uses Leatherette Front Covers within 80 characters and preserves competitor cover wording.');
   console.log('PASS: 80-character title gate blocks individual/account copy and export until corrected; the Update button is present.');
   console.log('PASS: CPIS competitor and Multi modes, DSA Beige, structured SEO after edits, console/foam generation, export and history restoration.');
 }

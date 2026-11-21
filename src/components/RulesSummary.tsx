@@ -80,7 +80,8 @@ export function RulesSummary({ accounts }: { accounts: AccountConfig[] }) {
           <ul className="rules-list">
             <li><strong>Never</strong> shortened: <code>Genuine</code> (no <code>Gen.</code>), <code>Driver</code> (no <code>Drvr</code>), <code>Passenger</code> (no <code>Pass</code>/<code>Pass.</code>/<code>Psgr</code>), <code>Bottom</code> (no <code>Btm</code> — use <code>Lower</code>).</li>
             <li><strong>Protected materials:</strong> <code>Leather</code> and <code>Leatherette</code> always stay complete — never <code>Lthr.</code>, <code>Lthr</code>, or <code>Leath.</code>, and never removed to fit. A legacy <code>Lthr.</code> in an imported CSV is restored to <code>Leather</code>.</li>
-            <li>Materials kept intact and distinct: Leatherette, Vinyl, Cloth, Suede, MB-Tex, Synthetic Leather (never turned into “Leather”).</li>
+            <li>For Vinyl/Leatherette, including legacy Synthetic Leather inputs, titles use <strong>Leatherette</strong> first and <strong>Vinyl</strong> only if approved shortening cannot fit. Synthetic Leather is not used in these titles. Other material identities remain intact.</li>
+            <li><strong>Cover/Covers always remains.</strong> Full front coverage may shorten to <code>Front Covers</code>. Top-only and bottom-only products retain their component.</li>
             <li><code>Replacement</code> fallback (in order, only while over 80): <code>Replacement→Repl.</code>, then <code>Repl.</code> removed — the product wording (<code>Seat Cover</code>/<code>Cover</code>) always remains.</li>
             <li>Allowed only when needed: <code>Perforated→Perf.</code>, <code>With→w/</code>, <code>Without→w/o</code>, <code>And→&amp;</code>, <code>Second Row→2nd Row</code>, <code>Center Console→Console</code>, <code>Bottom→Lower</code>, <code>Backrest→Back</code>, <code>Lean Back→Leanback</code>.</li>
           </ul>
@@ -98,8 +99,9 @@ export function RulesSummary({ accounts }: { accounts: AccountConfig[] }) {
             phrases (most complete first, e.g. <em>“Driver Top Replacement Seat Cover” → “…Seat Cover” → “…Cover”</em>).
             The generator keeps the most complete phrase that fits 80 chars, stepping down only as needed —
             including slash forms (<code>Driver/Passenger</code>, <code>Top/Bottom</code>, full words kept) and, for the
-            full front variation, <code>Front Seat Covers</code> when accurate. Notes record any fallback used.
+            full front variation, <code>Front Seat Covers</code>, then <code>Front Covers</code>. Notes record any fallback used.
           </li>
+          <li><strong>Competitor rules:</strong> the same approved phrase order applies within each account’s existing title layout. Part, material, product, color, fitment and vehicle keep that account’s order.</li>
           <li>All title and abbreviation rules above still apply. Titles stay ≤ 80 characters whenever possible; anything that can't fit cleanly is shown as <span className="badge badge-toolong">Too Long</span> + <span className="badge badge-risk">⚑ CHECK</span> for manual editing — never faked.</li>
           <li>Each variation only changes the seat-component wording. The vehicle, material, color, and product meaning are preserved exactly (Bottom never becomes Top, Rear never becomes Front, no implied full sets).</li>
         </ul>

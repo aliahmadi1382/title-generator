@@ -412,6 +412,16 @@ and the visual color word is **never** removed.
   `Leather` and never survives into a generated title.
   Leatherette/Vinyl/Cloth/Suede/MB-Tex/Synthetic Leather are never turned into
   "Leather".
+- **Vinyl/Leatherette titles:** the legacy Synthetic Leather input belongs to
+  this same family. Use **Leatherette** through the complete approved phrase
+  ladder first; use **Vinyl** only when Leatherette cannot fit 80 characters.
+  This title-only wording does not rewrite source material or SEO facts.
+- **Cover/Covers is mandatory.** Full front coverage ends its shortening
+  ladder at **Front Covers**, never Front Seats. Tops/bottoms retain their
+  component. Competitor mode uses the same ordered phrase ladder while
+  preserving each account's part/material/product layout.
+- After installing an update with **Update → Update and restart**, reopen and
+  regenerate saved batches to apply new rules. Saved title edits are preserved.
 - **`Replacement` fallback** (each step only while still over 80):
   `Replacement`→`Repl.` (note "Replacement shortened to Repl."), then `Repl.`
   removed (note "Replacement removed to meet character limit"). The product
